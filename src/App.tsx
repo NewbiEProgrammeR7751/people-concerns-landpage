@@ -7,7 +7,7 @@ import RecentActivity from "@/components/RecentActivity";
 const t = {
   en: {
     dir: "ltr" as const,
-    nav: { services: "Services", solutions: "Solutions", work: "Work", process: "Process", cta: "Start a Project" },
+    nav: { services: "Services", process: "Process", work: "Work", cta: "Start a Project" },
     hero: {
       badge: "Available for new projects — Q4 2026",
       h1a: "Building",
@@ -77,7 +77,7 @@ const t = {
   },
   ar: {
     dir: "rtl" as const,
-    nav: { services: "الخدمات", solutions: "الحلول", work: "أعمالنا", process: "منهجيتنا", cta: "ابدأ مشروعك" },
+    nav: { services: "الخدمات", process: "منهجيتنا", work: "أعمالنا", cta: "ابدأ مشروعك" },
     hero: {
       badge: "متاحون لمشاريع جديدة — الربع الرابع 2026",
       h1a: "نبني",
@@ -362,7 +362,7 @@ export default function App() {
           </a>
 
           <div className="hidden md:flex items-center" style={{ gap: "2.5rem" }}>
-            {(["services", "solutions", "work", "process"] as const).map((k) => (
+            {(["services", "process", "work"] as const).map((k) => (
               <a key={k} href={`#${k}`} className="text-sm font-medium no-underline transition-colors duration-200 hover:text-teal-400" style={{ color: "var(--text-secondary)" }}>
                 {tx.nav[k]}
               </a>
@@ -389,7 +389,7 @@ export default function App() {
 
         {menuOpen && (
           <div className="md:hidden px-6 pb-6 pt-2" style={{ background: "rgba(8,14,26,0.98)", borderBottom: "1px solid var(--border-subtle)" }}>
-            {(["services", "solutions", "work", "process"] as const).map((k) => (
+            {(["services", "process", "work"] as const).map((k) => (
               <a key={k} href={`#${k}`} onClick={() => setMenuOpen(false)}
                 className="block py-3 text-sm font-medium no-underline" style={{ color: "var(--text-secondary)", borderBottom: "1px solid var(--border-subtle)" }}>
                 {tx.nav[k]}
