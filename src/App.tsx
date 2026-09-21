@@ -20,7 +20,6 @@ const t = {
       stat2v: "5+ Years", stat2l: "Experience",
       stat3v: "Production-Ready", stat3l: "Systems",
     },
-    trust: "Trusted by forward-thinking companies",
     services: {
       badge: "What We Build",
       h2: "End-to-End Digital Engineering",
@@ -91,7 +90,6 @@ const t = {
       stat2v: "+5 سنوات", stat2l: "خبرة في المجال",
       stat3v: "جاهزة للإنتاج", stat3l: "أنظمة موثوقة",
     },
-    trust: "موثوق به من قِبل شركات رائدة",
     services: {
       badge: "ما نبنيه",
       h2: "هندسة رقمية شاملة من الفكرة إلى الإنتاج",
@@ -344,10 +342,6 @@ export default function App() {
   }, []);
 
   const serviceIcons = [<IconGlobe />, <IconMobile />, <IconPenTool />, <IconServer />];
-  const clientLogos = isAr
-    ? ["فيرتكس كورب", "نيكساكلاود", "أوريون لابز", "ستراتوم AI", "هيليكس جروب", "أكسيوم IO"]
-    : ["Vertex Corp", "NexaCloud", "Orion Labs", "Stratum AI", "Helix Group", "Axiom IO"];
-
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); setSubmitted(true); };
 
   const toggleLang = () => { setLang(l => l === "en" ? "ar" : "en"); setSubmitted(false); };
@@ -471,26 +465,6 @@ export default function App() {
 
           <div className="relative px-4 py-8">
             <DashboardMockup lang={lang} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── TRUST MARQUEE ───────────────────────────────────────────────── */}
-      <section style={{ borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)", background: "rgba(255,255,255,0.015)", overflow: "hidden" }}>
-        <div className="py-10">
-          <p className="text-center text-xs font-medium uppercase mb-8" style={{ color: "var(--text-muted)", letterSpacing: isAr ? "0.05em" : "0.14em" }}>
-            {tx.trust}
-          </p>
-          {/* Marquee with fade edges */}
-          <div className="relative" style={{ maskImage: "linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%)", WebkitMaskImage: "linear-gradient(90deg, transparent 0%, black 8%, black 92%, transparent 100%)" }}>
-            <div className="marquee-track">
-              {[...clientLogos, ...clientLogos].map((name, i) => (
-                <div key={i} className="flex items-center justify-center mx-4 px-7 py-3.5 rounded-xl flex-shrink-0"
-                  style={{ border: "1px solid var(--border-subtle)", background: "rgba(255,255,255,0.03)", minWidth: 140 }}>
-                  <span className="text-sm font-semibold whitespace-nowrap" style={{ color: "#64748b", fontFamily: headingFont, letterSpacing: "0.02em" }}>{name}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
