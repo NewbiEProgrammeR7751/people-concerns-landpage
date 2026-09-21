@@ -6,7 +6,7 @@
     "index": true
   },
   "openGraph": {
-    "image": ""
+    "image": "https://peopleconcerns.com/og-image.png"
   },
   "accessibility": {
     "addBypassLinks": true
