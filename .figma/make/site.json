@@ -1,0 +1,14 @@
+{
+  "title": "People Concerns — Digital Products Built Around Real Human Needs",
+  "description": "Custom mobile apps, high-performance web platforms, and tailored digital solutions built for scalable businesses.",
+  "language": "en",
+  "robots": {
+    "index": true
+  },
+  "openGraph": {
+    "image": ""
+  },
+  "accessibility": {
+    "addBypassLinks": true
+  }
+}
