@@ -10,5 +10,8 @@
   },
   "accessibility": {
     "addBypassLinks": true
+  },
+  "icons": {
+    "icon": "/favicon.png"
   }
 }
