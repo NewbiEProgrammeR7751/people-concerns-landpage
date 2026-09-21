@@ -23,8 +23,8 @@ The port is `8443` by default; override with `PORT`.
 
 ## Recent Activity widget
 
-The hero dashboard's activity list is fed by real `PushEvent` / `ReleaseEvent`
-data from a GitHub repository.
+The hero dashboard's activity list is fed by the latest commits and releases
+from a GitHub repository.
 
 ### Configure
 
@@ -63,7 +63,7 @@ curl -s http://localhost:8443/api/github-activity
 | Response | Meaning |
 | --- | --- |
 | `{"events":[...]}` | Working — the widget shows a pulsing teal **live** badge |
-| `{"events":[]}` | Auth fine, but no qualifying events (see caveat below) |
+| `{"events":[]}` | Auth fine, but the repo has no commits or releases |
 | `{"error":"not_configured"}` | A variable is missing; the server log names which |
 | `{"error":"bad_credentials"}` | Token rejected by GitHub |
 | `{"error":"repo_not_found"}` | Wrong owner/repo, or outside the token's scope |
@@ -73,16 +73,22 @@ Reading the JSON tells you more than the UI does — the widget deliberately
 hides every failure behind its static fallback, so a broken token and a quiet
 repo look identical on the page.
 
-> **Caveat.** GitHub only publishes `PushEvent`s for **public** repositories,
-> the events feed retains roughly 90 days, and it lags a push by up to a minute.
-> A repo that is private, newly made public, or simply quiet returns an empty
-> list — which is why the widget falls back rather than rendering nothing.
+> **Why `/commits`, not `/events`.** The obvious source is the Events API
+> filtered to `PushEvent`/`ReleaseEvent`, and this started there. But that API
+> is an eventually-consistent firehose with no delivery SLA: it publishes
+> nothing for private repositories, retains roughly 90 days, and on a freshly
+> created repo it can stay empty for hours even after `pushed_at` shows the
+> push landed. `/commits` reflects repository state immediately and works while
+> private. The tradeoff: one push of five commits renders as five rows rather
+> than one.
 
 ### How it works
 
 - **`api/github-activity.ts`** — the route handler. Reads the PAT from
-  `process.env`, filters to `PushEvent`/`ReleaseEvent`, and returns the latest
-  4 as `{ id, message, author, timestamp, isoTimestamp, kind }`. It lives
+  `process.env`, merges `/commits` and `/releases` newest-first, and returns the
+  latest 4 as `{ id, message, author, timestamp, isoTimestamp, kind }`. Releases
+  are best-effort: a repo with none, or a token that cannot read them, still
+  yields a commit feed rather than an empty one. It lives
   **outside `src/`** on purpose: anything under `src/` is bundled into the
   client, which would ship the token reference to the browser. Errors are
   returned as generic codes, with detail logged server-side only.

@@ -1,10 +1,16 @@
 /**
  * GET /api/github-activity
  *
- * Server-only proxy for the GitHub Events API. The PAT lives in
+ * Server-only proxy for recent GitHub activity. The PAT lives in
  * `process.env.GITHUB_TOKEN` and never crosses the network to the browser —
  * this module must never be imported from anything under `src/`, or Vite will
  * bundle it (and the token reference) into the client build.
+ *
+ * Reads /commits and /releases rather than /events. The Events API is an
+ * eventually-consistent firehose with no delivery SLA: it publishes nothing for
+ * private repositories, retains roughly 90 days, and can stay empty for hours
+ * on a freshly created repo even after a push is registered. /commits reflects
+ * the repository state immediately and works while private.
  *
  * This is a Web-standard `Request`/`Response` handler, so the same file works
  * unmodified as a Next.js App Router route (`app/api/github-activity/route.ts`),
@@ -21,8 +27,6 @@ const GITHUB_API_VERSION = "2022-11-28";
 
 /** How many events to return to the client. */
 const RESULT_LIMIT = 4;
-/** Events to pull upstream: most are non-Push/Release, so over-fetch to fill the list. */
-const UPSTREAM_PER_PAGE = 30;
 /** Give up on GitHub rather than hold the hero section hostage. */
 const UPSTREAM_TIMEOUT_MS = 5_000;
 /** Cache at the CDN: relative timestamps drift by at most this long. */
@@ -43,17 +47,25 @@ export type ActivityEvent = {
 
 // ── Upstream shapes (only the fields we actually read) ──────────────────────
 
-type GitHubActor = { login?: string; display_login?: string };
-
-type GitHubEvent = {
-  id?: string;
-  type?: string;
-  created_at?: string;
-  actor?: GitHubActor;
-  payload?: {
-    commits?: Array<{ message?: string }>;
-    release?: { name?: string | null; tag_name?: string | null };
+type GitHubCommit = {
+  sha?: string;
+  /** The linked GitHub account — null for commits from an unmatched email. */
+  author?: { login?: string } | null;
+  commit?: {
+    message?: string;
+    author?: { name?: string; date?: string } | null;
+    committer?: { date?: string } | null;
   };
+};
+
+type GitHubRelease = {
+  id?: number;
+  draft?: boolean;
+  tag_name?: string | null;
+  name?: string | null;
+  published_at?: string | null;
+  created_at?: string | null;
+  author?: { login?: string } | null;
 };
 
 // ── Formatting ─────────────────────────────────────────────────────────────
@@ -87,44 +99,44 @@ function summarize(raw: string): string {
   return `${firstLine.slice(0, MAX_MESSAGE_LENGTH - 1).trimEnd()}…`;
 }
 
-/** Returns null for events we can't render (empty pushes, malformed payloads). */
-function normalize(event: GitHubEvent, now: number): ActivityEvent | null {
-  const { id, type, created_at: createdAt, actor, payload } = event;
-  if (!id || !createdAt) return null;
+/** Returns null for commits we can't render. */
+function normalizeCommit(commit: GitHubCommit): Omit<ActivityEvent, "timestamp"> | null {
+  const sha = commit.sha;
+  const message = commit.commit?.message;
+  if (!sha || !message?.trim()) return null;
 
-  const author = actor?.display_login || actor?.login;
+  // Prefer the GitHub handle; fall back to the git author name when the commit
+  // email isn't linked to an account.
+  const author = commit.author?.login || commit.commit?.author?.name;
   if (!author) return null;
 
-  let message: string | undefined;
-  let kind: ActivityEvent["kind"];
-
-  if (type === "PushEvent") {
-    // GitHub lists commits oldest-first; the tip commit is the interesting one.
-    // Branch creates/deletes arrive as pushes with no commits — skip those.
-    const commits = payload?.commits;
-    const tip = commits?.[commits.length - 1]?.message;
-    if (!tip?.trim()) return null;
-    message = summarize(tip);
-    kind = "push";
-  } else if (type === "ReleaseEvent") {
-    const release = payload?.release;
-    const label = release?.tag_name || release?.name;
-    if (!label?.trim()) return null;
-    message = summarize(`Released ${label}`);
-    kind = "release";
-  } else {
-    return null;
-  }
-
-  if (!message) return null;
+  const date = commit.commit?.author?.date || commit.commit?.committer?.date;
+  if (!date || Number.isNaN(Date.parse(date))) return null;
 
   return {
-    id,
-    message,
+    id: sha,
+    message: summarize(message),
     author,
-    timestamp: toRelativeTime(createdAt, now),
-    isoTimestamp: new Date(createdAt).toISOString(),
-    kind,
+    isoTimestamp: new Date(date).toISOString(),
+    kind: "push",
+  };
+}
+
+/** Returns null for drafts and malformed releases. */
+function normalizeRelease(release: GitHubRelease): Omit<ActivityEvent, "timestamp"> | null {
+  if (release.draft) return null;
+
+  const label = release.tag_name || release.name;
+  const author = release.author?.login;
+  const date = release.published_at || release.created_at;
+  if (!label?.trim() || !author || !date || Number.isNaN(Date.parse(date))) return null;
+
+  return {
+    id: `release-${release.id ?? label}`,
+    message: summarize(`Released ${label}`),
+    author,
+    isoTimestamp: new Date(date).toISOString(),
+    kind: "release",
   };
 }
 
@@ -146,6 +158,18 @@ function fail(status: number, code: string, logDetail?: string): Response {
   return json({ error: code }, status, { "cache-control": "no-store" });
 }
 
+/** Maps an upstream failure onto our generic codes. */
+function classify(response: Response, owner: string, repo: string): Response {
+  const remaining = response.headers.get("x-ratelimit-remaining");
+  const rateLimited =
+    response.status === 429 || (response.status === 403 && remaining === "0");
+
+  if (rateLimited) return fail(429, "rate_limited", `reset=${response.headers.get("x-ratelimit-reset")}`);
+  if (response.status === 401) return fail(502, "bad_credentials", "GITHUB_TOKEN rejected by GitHub");
+  if (response.status === 404) return fail(502, "repo_not_found", `${owner}/${repo} not visible to this token`);
+  return fail(502, "upstream_error", `status ${response.status}`);
+}
+
 // ── Handler ────────────────────────────────────────────────────────────────
 
 export async function GET(_request?: Request): Promise<Response> {
@@ -162,22 +186,28 @@ export async function GET(_request?: Request): Promise<Response> {
     return fail(500, "not_configured", `missing env: ${missing.join(", ")}`);
   }
 
-  const url =
-    `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}` +
-    `/events?per_page=${UPSTREAM_PER_PAGE}`;
+  const base = `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const init: RequestInit = {
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/vnd.github+json",
+      "x-github-api-version": GITHUB_API_VERSION,
+      "user-agent": "people-concerns-activity-widget",
+    },
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    cache: "no-store",
+  };
 
-  let upstream: Response;
+  // Only RESULT_LIMIT of each can survive the merge, so fetch no more than that.
+  let commitsRes: Response;
+  let releasesRes: PromiseSettledResult<Response>;
   try {
-    upstream = await fetch(url, {
-      headers: {
-        authorization: `Bearer ${token}`,
-        accept: "application/vnd.github+json",
-        "x-github-api-version": GITHUB_API_VERSION,
-        "user-agent": "people-concerns-activity-widget",
-      },
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-      cache: "no-store",
-    });
+    const [c, r] = await Promise.all([
+      fetch(`${base}/commits?per_page=${RESULT_LIMIT}`, init),
+      Promise.allSettled([fetch(`${base}/releases?per_page=${RESULT_LIMIT}`, init)]).then((s) => s[0]),
+    ]);
+    commitsRes = c;
+    releasesRes = r;
   } catch (error) {
     const aborted = error instanceof Error && error.name === "TimeoutError";
     return fail(
@@ -187,38 +217,48 @@ export async function GET(_request?: Request): Promise<Response> {
     );
   }
 
-  if (!upstream.ok) {
-    // 403 with no remaining quota is the rate limit; 403 otherwise is a scope problem.
-    const remaining = upstream.headers.get("x-ratelimit-remaining");
-    const rateLimited =
-      upstream.status === 429 || (upstream.status === 403 && remaining === "0");
+  // Commits are the primary source; a failure there is a real failure.
+  if (!commitsRes.ok) return classify(commitsRes, owner, repo);
 
-    if (rateLimited) return fail(429, "rate_limited", `reset=${upstream.headers.get("x-ratelimit-reset")}`);
-    if (upstream.status === 401) return fail(502, "bad_credentials", "GITHUB_TOKEN rejected by GitHub");
-    if (upstream.status === 404) return fail(502, "repo_not_found", `${owner}/${repo} not visible to this token`);
-    return fail(502, "upstream_error", `status ${upstream.status}`);
-  }
-
-  let events: unknown;
+  let commitsBody: unknown;
   try {
-    events = await upstream.json();
+    commitsBody = await commitsRes.json();
   } catch (error) {
     return fail(502, "invalid_upstream_body", error instanceof Error ? error.message : String(error));
   }
+  if (!Array.isArray(commitsBody)) {
+    return fail(502, "invalid_upstream_body", "expected an array of commits");
+  }
 
-  if (!Array.isArray(events)) {
-    return fail(502, "invalid_upstream_body", "expected an array of events");
+  const activity: Array<Omit<ActivityEvent, "timestamp">> = [];
+  for (const commit of commitsBody as GitHubCommit[]) {
+    const normalized = normalizeCommit(commit);
+    if (normalized) activity.push(normalized);
+  }
+
+  // Releases are a bonus: a repo may have none, and the token may not cover
+  // them. Never let that failure empty the feed.
+  if (releasesRes.status === "fulfilled" && releasesRes.value.ok) {
+    try {
+      const body: unknown = await releasesRes.value.json();
+      if (Array.isArray(body)) {
+        for (const release of body as GitHubRelease[]) {
+          const normalized = normalizeRelease(release);
+          if (normalized) activity.push(normalized);
+        }
+      }
+    } catch {
+      // Ignore: commits alone still make a valid feed.
+    }
   }
 
   const now = Date.now();
-  const activity: ActivityEvent[] = [];
-  for (const event of events as GitHubEvent[]) {
-    const normalized = normalize(event, now);
-    if (normalized) activity.push(normalized);
-    if (activity.length === RESULT_LIMIT) break;
-  }
+  const events: ActivityEvent[] = activity
+    .sort((a, b) => Date.parse(b.isoTimestamp) - Date.parse(a.isoTimestamp))
+    .slice(0, RESULT_LIMIT)
+    .map((event) => ({ ...event, timestamp: toRelativeTime(event.isoTimestamp, now) }));
 
-  return json({ events: activity }, 200, { "cache-control": CACHE_CONTROL });
+  return json({ events }, 200, { "cache-control": CACHE_CONTROL });
 }
 
 // Vercel/Netlify function default export (Web handler signature).
