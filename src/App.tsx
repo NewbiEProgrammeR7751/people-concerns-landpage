@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import logoIcon from "@/imports/PeopleConcerns_Icon_Transparent_500.png";
 import RecentActivity from "@/components/RecentActivity";
 
@@ -16,9 +16,9 @@ const t = {
       sub: "Custom mobile apps, high-performance web platforms, and tailored digital solutions built for scalable businesses.",
       cta1: "Book a Strategy Call",
       cta2: "View Case Studies",
-      stat1v: "280+", stat1l: "Projects Delivered",
-      stat2v: "8 yrs", stat2l: "Industry Experience",
-      stat3v: "94%", stat3l: "Client Retention",
+      stat1v: "Full-Stack", stat1l: "Engineering",
+      stat2v: "5+ Years", stat2l: "Experience",
+      stat3v: "Production-Ready", stat3l: "Systems",
     },
     trust: "Trusted by forward-thinking companies",
     services: {
@@ -46,10 +46,10 @@ const t = {
     },
     metrics: {
       items: [
-        { suffix: "%", label: "Uptime SLA", decimals: 1 },
-        { suffix: "+", label: "Projects Shipped", decimals: 0 },
-        { suffix: "%", label: "Client Retention", decimals: 0 },
-        { suffix: "ms", label: "Avg. API Response", decimals: 0 },
+        { title: "Cloud-Native", subtitle: "Scalable infrastructure" },
+        { title: "Modern Stack", subtitle: "React Native & Web" },
+        { title: "Agile Sprints", subtitle: "Iterative delivery" },
+        { title: "High Performance", subtitle: "Optimized for speed" },
       ],
     },
     cta: {
@@ -87,9 +87,9 @@ const t = {
       sub: "تطبيقات الجوال المخصصة، ومنصات الويب عالية الأداء، والحلول الرقمية المصممة خصيصاً للشركات القابلة للتوسع.",
       cta1: "احجز استشارة استراتيجية",
       cta2: "استعرض دراسات الحالة",
-      stat1v: "+280", stat1l: "مشروع منجز",
-      stat2v: "8 سنوات", stat2l: "خبرة في المجال",
-      stat3v: "94%", stat3l: "معدل الاحتفاظ بالعملاء",
+      stat1v: "هندسة متكاملة", stat1l: "واجهات وخوادم",
+      stat2v: "+5 سنوات", stat2l: "خبرة في المجال",
+      stat3v: "جاهزة للإنتاج", stat3l: "أنظمة موثوقة",
     },
     trust: "موثوق به من قِبل شركات رائدة",
     services: {
@@ -117,10 +117,10 @@ const t = {
     },
     metrics: {
       items: [
-        { suffix: "%", label: "اتفاقية مستوى الخدمة للتشغيل", decimals: 1 },
-        { suffix: "+", label: "مشروع تم شحنه", decimals: 0 },
-        { suffix: "%", label: "معدل الاحتفاظ بالعملاء", decimals: 0 },
-        { suffix: "مللي ث", label: "متوسط استجابة API", decimals: 0 },
+        { title: "مبني للسحابة", subtitle: "بنية قابلة للتوسع" },
+        { title: "تقنيات حديثة", subtitle: "React Native والويب" },
+        { title: "سباقات رشيقة", subtitle: "تسليم تكراري" },
+        { title: "أداء عالٍ", subtitle: "مُحسّن للسرعة" },
       ],
     },
     cta: {
@@ -217,24 +217,6 @@ function PplconsLogoMark({ size = 36 }: { size?: number }) {
       style={{ width: size, height: size, objectFit: "contain" }}
     />
   );
-}
-
-// ── Counter ────────────────────────────────────────────────────────────────
-
-function useCounter(end: number, duration = 2000, startTrigger = false) {
-  const [count, setCount] = useState(0);
-  useEffect(() => {
-    if (!startTrigger) return;
-    let startTime: number | null = null;
-    const step = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      setCount(Math.floor(progress * end));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [end, duration, startTrigger]);
-  return count;
 }
 
 // ── Dashboard Mockup ───────────────────────────────────────────────────────
@@ -341,8 +323,6 @@ export default function App() {
   const [lang, setLang] = useState<Lang>("en");
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [metricsVisible, setMetricsVisible] = useState(false);
-  const metricsRef = useRef<HTMLDivElement>(null);
   const [formState, setFormState] = useState({ name: "", email: "", company: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -362,18 +342,6 @@ export default function App() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setMetricsVisible(true); }, { threshold: 0.3 });
-    if (metricsRef.current) obs.observe(metricsRef.current);
-    return () => obs.disconnect();
-  }, []);
-
-  const uptime = useCounter(999, 1800, metricsVisible);
-  const projects = useCounter(280, 2000, metricsVisible);
-  const clients = useCounter(94, 1600, metricsVisible);
-  const speed = useCounter(42, 1400, metricsVisible);
-  const metricVals = [uptime / 10, projects, clients, speed];
 
   const serviceIcons = [<IconGlobe />, <IconMobile />, <IconPenTool />, <IconServer />];
   const clientLogos = isAr
@@ -629,17 +597,17 @@ export default function App() {
       </section>
 
       {/* ── METRICS ─────────────────────────────────────────────────────── */}
-      <section ref={metricsRef} className="py-24" style={{ background: "linear-gradient(135deg, rgba(42,184,168,0.08), rgba(232,96,80,0.05))", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
+      <section className="py-24" style={{ background: "linear-gradient(135deg, rgba(42,184,168,0.08), rgba(232,96,80,0.05))", borderTop: "1px solid var(--border-subtle)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {tx.metrics.items.map((m, i) => {
               const colors = ["var(--teal)", "var(--text-primary)", "var(--coral)", "#5b8df0"];
               return (
-                <div key={m.label}>
-                  <div className="text-4xl sm:text-5xl font-extrabold mb-2" style={{ fontFamily: headingFont, color: colors[i], letterSpacing: isAr ? "0" : "-0.03em" }}>
-                    {metricVals[i].toFixed(m.decimals)}{m.suffix}
+                <div key={m.title}>
+                  <div className="text-base sm:text-lg lg:text-2xl font-bold mb-2" style={{ fontFamily: headingFont, color: colors[i], letterSpacing: isAr ? "0" : "-0.01em" }}>
+                    {m.title}
                   </div>
-                  <div className="text-sm" style={{ color: "var(--text-secondary)" }}>{m.label}</div>
+                  <div className="text-sm" style={{ color: "var(--text-secondary)" }}>{m.subtitle}</div>
                 </div>
               );
             })}
