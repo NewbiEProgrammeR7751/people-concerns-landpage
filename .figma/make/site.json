@@ -15,6 +15,6 @@
     "icon": "/favicon.png"
   },
   "customScripts": {
-    "headEnd": "<link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/apple-touch-icon.png\">\n    <link rel=\"manifest\" href=\"/site.webmanifest\">\n    <meta name=\"theme-color\" content=\"#080e1a\">\n    <meta property=\"og:url\" content=\"https://peopleconcerns.com/\">"
+    "headEnd": "<link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/apple-touch-icon.png\">\n    <link rel=\"manifest\" href=\"/site.webmanifest\">\n    <meta name=\"theme-color\" content=\"#080e1a\">\n    <meta property=\"og:type\" content=\"website\">\n    <meta property=\"og:url\" content=\"https://peopleconcerns.com/\">"
   }
 }
