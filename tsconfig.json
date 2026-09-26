@@ -19,5 +19,5 @@
     "strict": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "api", "vite.config.ts", "vite-plugin-github-activity.ts"]
+  "include": ["src", "api", "vite.config.ts", "vite-plugin-dev-api.ts"]
 }

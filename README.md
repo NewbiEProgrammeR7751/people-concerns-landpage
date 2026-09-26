@@ -98,28 +98,136 @@ repo look identical on the page.
   `app/api/github-activity/route.ts`, or onto Vercel/Netlify as a function.
   Only the dev path has been exercised in this repo.
 
-- **`vite-plugin-github-activity.ts`** — dev-only middleware that mounts the
-  handler at `/api/github-activity`, since Vite has no server runtime of its
-  own. Secrets are loaded into `process.env`, never into `define`, so they
-  cannot reach the bundle. **In production this plugin is not involved** —
-  the route must be served by your host's function runtime.
+- **`vite-plugin-dev-api.ts`** — dev-only middleware that mounts every `api/`
+  handler (`/api/github-activity`, `/api/concern-received`), since Vite has no
+  server runtime of its own. It bridges the Node request onto the Web-standard
+  `Request` the handlers expect, including the POST body. Secrets are loaded into
+  `process.env`, never into `define`, so they cannot reach the bundle. **In
+  production this plugin is not involved** — the routes must be served by your
+  host's function runtime.
 
 - **`src/components/RecentActivity.tsx`** — fetches on mount, then polls every
   60s while the tab is visible. Any failure resolves to static fallback events.
   Relative timestamps are re-derived client-side from `isoTimestamp`, so they
   stay correct behind the 60s CDN cache and localise for Arabic via `Intl`.
 
+## Legal pages
+
+`/terms-and-conditions` and `/privacy-policy` are React pages converted from the
+supplied HTML documents. The source stylesheet was light-on-white; it is
+re-expressed with the site's dark tokens so a visitor coming from the footer
+doesn't flash from dark to white. Layout, sticky table of contents, tables and
+the print stylesheet all carry over.
+
+Routing is `src/router.tsx` — a ~50-line history router, no dependency. Vite's
+dev and preview servers already fall back to `index.html`, so deep links work
+locally. **On a static host, add the same SPA rewrite** (`/*` → `/index.html`),
+or those two URLs 404 on a hard refresh. Unknown paths render the landing page.
+
+### Filling in the legal values
+
+Every value the source marked `<mark class="fill">` now lives in
+`src/content/company.ts`. Edit it there once and both documents update.
+Values still needing a real answer are flagged `TODO(legal)`:
+
+| Field | Status |
+| --- | --- |
+| `name`, `city` (Jeddah), `dpoName` (Rawad Medhir), `crNumber` (7055132117) | done |
+| `legalName` | confirm it matches the Commercial Registration |
+| `nationalAddress` | building no., street, district, postal code |
+| `courtCity` | dispute venue, Terms s18 — defaults to `city`, confirm with counsel |
+| `phone`, `officeHours` | replace the placeholder switchboard number |
+| `liabilityCap` | Terms s14 free-tier cap |
+| `retention.*`, `hostingStatement` | Privacy s10 and s8 |
+
+Both documents were drafted for the PDPL and its Implementing Regulations. Have
+a Saudi-licensed lawyer review them before publishing.
+
+## Contact form email
+
+Submitting the "Start a Project" form posts to `POST /api/concern-received`,
+which assigns a reference (`PC-260926-1438`), renders
+`emails/concern-received.{html,txt}` and sends both parts to the person who
+wrote in. The form shows the reference on success.
+
+### Configure
+
+Copy the block from `.env.example` into `.env` and fill in:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `RESEND_API_KEY` | **yes** | Resend key. Without it the route returns 500 `not_configured`. |
+| `PUBLIC_SITE_URL` | **yes** | Absolute origin. Every URL in the email is built from it, including the logo. |
+| `CONCERN_FROM_EMAIL` | no | Envelope sender; defaults to `People Concerns <NoReply@peopleconcerns.com>`. |
+| `CONCERNS_INBOX_EMAIL` | recommended | Where the submission itself is forwarded. Unset means the enquiry reaches nobody but the sender. |
+| `CONCERN_TRACKING_URL` | no | Template for the "Track your concern" button; `{reference}` is substituted. |
+
+The sending domain must be verified in Resend before mail to external addresses
+is delivered. To use a different provider, rewrite `sendEmail()` in
+`api/concern-received.ts` — it is the only function that touches the provider.
+
+### The logo must be publicly reachable
+
+Mail clients cannot resolve relative paths, so the header logo is referenced as
+`${PUBLIC_SITE_URL}/email-assets/pc-logo-horizontal-ondark@2x.png`. That file
+ships in `public/email-assets/`, so it is served automatically — but the URL only
+resolves once the site is deployed at `PUBLIC_SITE_URL`. Until then the email
+sends with a broken image.
+
+### Verify
+
+```bash
+npm run dev
+curl -s -X POST http://localhost:8443/api/concern-received   -H 'content-type: application/json'   -d '{"name":"Test","email":"you@example.com","company":"Acme","message":"Hello"}'
+```
+
+`{"reference":"PC-…"}` with HTTP 202 means it sent. Error codes: `not_configured`
+(missing key), `invalid_fields` / `invalid_email` (validation), `rate_limited`
+(more than 5 posts from one IP in 10 minutes), `provider_error` (Resend rejected
+it — the reason is in the server log, never in the response).
+
+### Deploying the templates
+
+The route reads the two template files from `emails/` at runtime. Bundled
+function runtimes prune files they cannot see statically, so include them
+explicitly — on Vercel:
+
+```json
+{ "functions": { "api/concern-received.*": { "includeFiles": "emails/**" } } }
+```
+
+Otherwise the route returns 500 `template_unavailable`.
+
+### Rate limiting
+
+The in-process limiter in the handler is a brake, not a guarantee: state resets
+on cold start and is not shared between instances. Put a real limiter in front
+before the form sees meaningful traffic.
+
 ## Layout
 
 ```
-api/                        server-only route handler (never import from src/)
+api/                        server-only route handlers (never import from src/)
+  github-activity.ts        GET  — feeds the Recent Activity widget
+  concern-received.ts       POST — sends the contact-form confirmation email
+emails/
+  concern-received.html     transactional email, merge tags only
+  concern-received.txt      plain-text part (multipart/alternative)
 public/                     favicon, apple-touch-icon, manifest icons, og-image
+  email-assets/             logo referenced by the email at an absolute URL
 src/
-  App.tsx                   page + EN/AR translations
+  App.tsx                   landing page + EN/AR translations
+  router.tsx                dependency-free history router (3 routes)
   components/
     RecentActivity.tsx      the live widget
-  index.css                 design tokens and keyframes
-vite-plugin-github-activity.ts
+  content/
+    company.ts              legal + contact data for the Terms/Privacy pages
+  pages/
+    LegalLayout.tsx         shared shell and content primitives
+    TermsAndConditions.tsx  /terms-and-conditions
+    PrivacyPolicy.tsx       /privacy-policy
+  index.css                 design tokens, keyframes, legal print styles
+vite-plugin-dev-api.ts      serves api/ handlers during dev and preview
 .figma/make/site.json       title, description, icons, social meta
 ```
 
