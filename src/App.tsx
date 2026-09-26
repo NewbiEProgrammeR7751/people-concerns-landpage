@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import logoIcon from "@/imports/PeopleConcerns_Icon_Transparent_500.png";
 import RecentActivity from "@/components/RecentActivity";
+import { Link } from "@/router";
 
 // ── Translations (no external imports) ────────────────────────────────────
 
@@ -65,6 +66,10 @@ const t = {
       },
       successTitle: "Message received!",
       successSub: "We'll be in touch within 24 hours.",
+      successRef: "Your reference",
+      sending: "Sending…",
+      errorTitle: "We couldn't send that",
+      errorRetry: "Please try again, or email us at",
     },
     footer: {
       tagline: "People Concerns — building digital products that center human needs. Technology in service of real people.",
@@ -72,7 +77,10 @@ const t = {
       services: { title: "Services", links: ["Web Applications", "Mobile Apps", "UI/UX Design", "Enterprise Solutions", "Strategy & Consulting"] },
       company: { title: "Company", links: ["About Us", "Case Studies", "Careers", "Blog", "Contact"] },
       copy: "© 2026 People Concerns Ltd. All rights reserved.",
-      legal: ["Privacy Policy", "Terms of Service", "Cookie Policy"],
+      legal: [
+        { label: "Privacy Policy", to: "/privacy-policy" },
+        { label: "Terms and Conditions", to: "/terms-and-conditions" },
+      ],
     },
   },
   ar: {
@@ -135,6 +143,10 @@ const t = {
       },
       successTitle: "تم استلام رسالتك!",
       successSub: "سنتواصل معك خلال 24 ساعة.",
+      successRef: "رقمك المرجعي",
+      sending: "جارٍ الإرسال…",
+      errorTitle: "لم نتمكن من الإرسال",
+      errorRetry: "يرجى المحاولة مرة أخرى، أو راسلنا على",
     },
     footer: {
       tagline: "People Concerns — نبني منتجات رقمية تُقدّم الإنسان في المركز. التكنولوجيا في خدمة الناس الحقيقيين.",
@@ -142,7 +154,10 @@ const t = {
       services: { title: "الخدمات", links: ["تطبيقات الويب", "تطبيقات الجوال", "تصميم UI/UX", "حلول المؤسسات", "الاستراتيجية والاستشارات"] },
       company: { title: "الشركة", links: ["من نحن", "دراسات الحالة", "الوظائف", "المدونة", "تواصل معنا"] },
       copy: "© 2026 People Concerns Ltd. جميع الحقوق محفوظة.",
-      legal: ["سياسة الخصوصية", "شروط الخدمة", "سياسة الكوكيز"],
+      legal: [
+        { label: "سياسة الخصوصية", to: "/privacy-policy" },
+        { label: "الشروط والأحكام", to: "/terms-and-conditions" },
+      ],
     },
   },
 };
@@ -322,7 +337,10 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [formState, setFormState] = useState({ name: "", email: "", company: "", message: "" });
-  const [submitted, setSubmitted] = useState(false);
+  /** null = untouched, "sending" = in flight, otherwise the outcome. */
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [reference, setReference] = useState<string | null>(null);
+  const submitted = status === "sent";
 
   const tx = t[lang];
   const isAr = lang === "ar";
@@ -342,9 +360,34 @@ export default function App() {
   }, []);
 
   const serviceIcons = [<IconGlobe />, <IconMobile />, <IconPenTool />, <IconServer />];
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); setSubmitted(true); };
+  /**
+   * Posts the enquiry to /api/concern-received, which sends the member the
+   * "Concern received" confirmation and forwards the submission to the team.
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (status === "sending") return;
+    setStatus("sending");
 
-  const toggleLang = () => { setLang(l => l === "en" ? "ar" : "en"); setSubmitted(false); };
+    try {
+      const response = await fetch("/api/concern-received", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(formState),
+      });
+      if (!response.ok) throw new Error(`status ${response.status}`);
+
+      const body = (await response.json()) as { reference?: string };
+      setReference(body.reference ?? null);
+      setStatus("sent");
+      setFormState({ name: "", email: "", company: "", message: "" });
+    } catch (error) {
+      console.error("[contact-form]", error);
+      setStatus("error");
+    }
+  };
+
+  const toggleLang = () => { setLang(l => l === "en" ? "ar" : "en"); setStatus("idle"); setReference(null); };
 
   return (
     <div style={{ background: "var(--bg-deep)", color: "var(--text-primary)", overflowX: "hidden", fontFamily: bodyFont, direction: tx.dir }}>
@@ -628,6 +671,12 @@ export default function App() {
                   </div>
                   <h3 className="text-xl font-bold mb-2" style={{ fontFamily: headingFont }}>{tx.cta.successTitle}</h3>
                   <p style={{ color: "var(--text-secondary)" }}>{tx.cta.successSub}</p>
+                  {reference && (
+                    <p className="mt-4 text-sm" style={{ color: "var(--text-muted)" }}>
+                      {tx.cta.successRef}:{" "}
+                      <span className="font-semibold tracking-wide" style={{ color: "var(--teal)" }}>{reference}</span>
+                    </p>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -665,10 +714,22 @@ export default function App() {
                       onBlur={(e) => e.currentTarget.style.borderColor = "var(--border-subtle)"}
                     />
                   </div>
-                  <button type="submit" className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
+                  <button type="submit" disabled={status === "sending"}
+                    className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 enabled:hover:scale-[1.02] enabled:hover:shadow-xl disabled:opacity-60 disabled:cursor-wait"
                     style={{ background: "linear-gradient(135deg, var(--teal), #1a9080)", color: "#fff", fontFamily: headingFont, boxShadow: "0 0 30px rgba(42,184,168,0.2)" }}>
-                    {tx.cta.fields.submit}
+                    {status === "sending" ? tx.cta.sending : tx.cta.fields.submit}
                   </button>
+
+                  {status === "error" && (
+                    <div role="alert" className="rounded-xl px-4 py-3 text-sm"
+                      style={{ background: "var(--coral-dim)", border: "1px solid rgba(232,96,80,0.3)", color: "var(--text-secondary)" }}>
+                      <span className="font-semibold" style={{ color: "var(--coral)" }}>{tx.cta.errorTitle}.</span>{" "}
+                      {tx.cta.errorRetry}{" "}
+                      <a href="mailto:support@peopleconcerns.com" className="underline" style={{ color: "var(--text-primary)" }}>
+                        support@peopleconcerns.com
+                      </a>
+                    </div>
+                  )}
                 </form>
               )}
             </div>
@@ -715,7 +776,7 @@ export default function App() {
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>{tx.footer.copy}</p>
             <div className="flex gap-6">
               {tx.footer.legal.map((l) => (
-                <a key={l} href="#" className="text-xs no-underline transition-colors duration-200 hover:text-teal-400" style={{ color: "var(--text-muted)" }}>{l}</a>
+                <Link key={l.to} to={l.to} className="text-xs no-underline transition-colors duration-200 hover:text-teal-400" style={{ color: "var(--text-muted)" }}>{l.label}</Link>
               ))}
             </div>
           </div>

@@ -137,3 +137,91 @@ nav a {
 nav a:hover {
   color: var(--teal);
 }
+
+/* ── Legal documents (Terms, Privacy Policy) ───────────────────────────────
+   The source HTML shipped a print stylesheet that Tailwind utilities can't
+   express (@page, columns, break-*). Scoped to .legal-doc so it only affects
+   those two pages, and inverted to ink-on-white so a printout is readable. */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 16mm 20mm;
+  }
+
+  .legal-doc {
+    background: #fff !important;
+    color: #2b3a4d !important;
+    font-size: 10.5pt;
+    line-height: 1.6;
+  }
+
+  .legal-doc h1,
+  .legal-doc h2,
+  .legal-doc strong,
+  .legal-doc th {
+    color: #142030 !important;
+  }
+
+  /* Chrome that carries no meaning on paper. */
+  .legal-doc > a[href="#content"],
+  .legal-doc header nav,
+  .legal-doc footer nav {
+    display: none !important;
+  }
+
+  .legal-doc header,
+  .legal-doc footer {
+    background: #f5f7fa !important;
+    border-radius: 10px;
+    break-inside: avoid;
+  }
+
+  /* Drop the sidebar grid and let the contents list run as two columns. */
+  .legal-doc > div:has(> main) {
+    display: block !important;
+    max-width: none;
+    padding: 24px 0 0;
+  }
+
+  .legal-doc details {
+    position: static !important;
+    max-height: none !important;
+    margin-bottom: 24px;
+    border: 1px solid #e1e6ed !important;
+    border-radius: 10px;
+    padding: 16px 20px !important;
+    break-inside: avoid;
+  }
+
+  .legal-doc details ol {
+    columns: 2;
+    column-gap: 28px;
+    border: 0 !important;
+  }
+
+  .legal-doc details li a {
+    padding: 2px 0 !important;
+    border: 0 !important;
+    margin: 0 !important;
+  }
+
+  .legal-doc main {
+    background: #fff !important;
+    border: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  .legal-doc section h2 {
+    break-after: avoid;
+    font-size: 14pt;
+  }
+
+  .legal-doc tr {
+    break-inside: avoid;
+  }
+
+  .legal-doc a {
+    text-decoration: none;
+  }
+}

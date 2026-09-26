@@ -1,0 +1,32 @@
+PEOPLE CONCERNS
+
+Thank you, {{member_name}}. We've received your concern.
+
+Thank you for taking the time to raise this with us. Speaking up helps us make things better, and we take every concern seriously.
+
+Our team will review it within a few minutes, and we'll be in touch with you as soon as we have an update.
+
+Reference:  {{concern_reference}}
+Subject:    {{concern_subject}}
+Submitted:  {{submitted_at}}
+
+What happens next
+1. We review it. A member of our team reads your concern within a few minutes.
+2. We follow up if needed. If we need more detail, we'll contact you directly.
+3. You hear back from us. We'll email you with the outcome and any next steps.
+
+Track your concern: {{concern_url}}
+
+This email was sent from {{noreply_email}}, which doesn't receive replies. To add details to your concern, use the link above or reach us using the contact details below.
+
+------------------------------------------------------------
+Contact us
+Email:   {{support_email}}
+Phone:   {{support_phone}}
+Website: {{website}}
+Office:  {{office_address}} ({{office_hours}})
+
+You're receiving this email because you submitted a concern at {{website}}.
+Privacy policy: {{privacy_url}}
+Terms: {{terms_url}}
+© {{year}} {{company_name}}. All rights reserved.
