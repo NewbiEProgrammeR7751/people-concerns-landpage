@@ -127,18 +127,30 @@ or those two URLs 404 on a hard refresh. Unknown paths render the landing page.
 ### Filling in the legal values
 
 Every value the source marked `<mark class="fill">` now lives in
-`src/content/company.ts`. Edit it there once and both documents update.
-Values still needing a real answer are flagged `TODO(legal)`:
+`src/content/company.ts`. Edit it there once and both documents update — the
+confirmation email reads its contact details from the same file, so the two
+cannot drift apart.
 
-| Field | Status |
+Filled from the Commercial Registration and the National Address certificate:
+
+| Field | Value |
 | --- | --- |
-| `name`, `city` (Jeddah), `dpoName` (Rawad Medhir), `crNumber` (7055132117) | done |
-| `legalName` | confirm it matches the Commercial Registration |
-| `nationalAddress` | building no., street, district, postal code |
-| `courtCity` | dispute venue, Terms s18 — defaults to `city`, confirm with counsel |
-| `phone`, `officeHours` | replace the placeholder switchboard number |
-| `liabilityCap` | Terms s14 free-tier cap |
-| `retention.*`, `hostingStatement` | Privacy s10 and s8 |
+| `name`, `legalName` | People Concerns |
+| `crNumber` | 7055132117 |
+| `nationalAddress` | Building 4384, Additional No. 7247, Al Narjis Dist., Riyadh 13343 |
+| `city`, `courtCity` | Riyadh |
+| `phone` | 0555578897 (displayed as-is; `phoneE164` backs the `tel:` link) |
+| `officeHours` | Sunday to Thursday, 9:00 AM to 5:00 PM |
+| `dpoName` | Rawad Medhir |
+| `liabilityCap` | SAR 500 |
+| `retention.closedConcern` / `.technicalLogs` | 3 years / 12 months |
+| `hostingStatement` | primary hosting in the Kingdom |
+
+One value is still open, flagged `TODO(legal)`:
+
+| Field | Needs |
+| --- | --- |
+| `retention.closedAccount` | how long account data is kept after closure — left at 12 months to match the technical-log period |
 
 Both documents were drafted for the PDPL and its Implementing Regulations. Have
 a Saudi-licensed lawyer review them before publishing.

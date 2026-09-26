@@ -2,9 +2,12 @@
  * Single source of truth for the legal / contact values that the source HTML
  * documents shipped as <mark class="fill"> placeholders.
  *
- * Everything marked  TODO(legal)  still needs a real value from the business
- * before the Terms and Privacy pages go live. The pages render these verbatim,
- * so filling a value here updates every place it appears in both documents.
+ * Values come from the Commercial Registration and the National Address
+ * certificate. The pages render them verbatim, so editing a value here updates
+ * every place it appears in both documents.
+ *
+ * Anything still marked  TODO(legal)  needs a decision from the business before
+ * the pages go live.
  */
 
 export const company = {
@@ -14,7 +17,6 @@ export const company = {
   /**
    * Legal name exactly as printed on the Commercial Registration. Kept separate
    * from `name` because the Terms cite it as the contracting entity.
-   * TODO(legal): replace with the legal name on the CR if it differs.
    */
   legalName: 'People Concerns',
 
@@ -24,8 +26,8 @@ export const company = {
    */
   crNumber: '7055132117',
 
-  /** City of the registered office. */
-  city: 'Jeddah',
+  /** City of the registered office, per the National Address certificate. */
+  city: 'Riyadh',
   country: 'Kingdom of Saudi Arabia',
 
   /** Short form used in the hero, meta description and footers. */
@@ -34,26 +36,27 @@ export const company = {
   },
 
   /**
-   * Full Saudi national address.
-   * TODO(legal): replace with building no., street, district and postal code.
+   * Full Saudi national address, verbatim from the National Address
+   * certificate. A literal rather than a template because the postal code sits
+   * mid-string, between the city and the country.
    */
-  get nationalAddress() {
-    return `[Building no., street, district, postal code], ${this.city}, ${this.country}`
-  },
+  nationalAddress:
+    'Building 4384, Additional No. 7247, Al Narjis Dist., Riyadh 13343, Kingdom of Saudi Arabia',
+
+  /** City whose courts hear disputes under Terms s18. */
+  courtCity: 'Riyadh',
+
+  /** Contact number as published, in the local format. */
+  phone: '0555578897',
 
   /**
-   * City whose courts hear disputes under Terms s18. Defaults to the city of the
-   * registered office.
-   * TODO(legal): confirm the venue with counsel — it need not match `city`.
+   * The same number in E.164 for the `tel:` link. Held separately because a
+   * local-format href cannot be dialled from outside the Kingdom, and the
+   * published display form is deliberately left as-is.
    */
-  get courtCity() {
-    return this.city
-  },
-
-  /** TODO(legal): replace the placeholder switchboard number. */
-  phone: '+966 11 000 0000',
+  phoneE164: '+966555578897',
   get phoneHref() {
-    return `tel:${this.phone.replace(/[^+\d]/g, '')}`
+    return `tel:${this.phoneE164}`
   },
 
   supportEmail: 'support@peopleconcerns.com',
@@ -63,24 +66,31 @@ export const company = {
   website: 'www.peopleconcerns.com',
   websiteUrl: 'https://www.peopleconcerns.com',
 
-  /** TODO(legal): confirm the published office hours. */
-  officeHours: 'Sunday to Thursday, 9:00 to 17:00',
+  /** Published office hours. */
+  officeHours: 'Sunday to Thursday, 9:00 AM to 5:00 PM',
 
   /** Personal Data Protection Officer named in the Privacy Policy (s1, s19). */
   dpoName: 'Rawad Medhir',
 
-  /** Terms s14 — liability cap for the free tier. TODO(legal): confirm the amount. */
+  /** Terms s14 — liability cap for the free tier. */
   liabilityCap: 'SAR 500',
 
-  /** Privacy Policy s10 — retention periods. TODO(legal): confirm each period. */
+  /**
+   * Privacy Policy s10 — retention periods, one per row of the table.
+   *
+   * TODO(legal): `closedAccount` is the one period the National Address update
+   * did not specify. It is left at 12 months, matching the technical-log period;
+   * confirm or change it. The other two are as instructed: technical logs 12
+   * months, concerns and correspondence 3 years.
+   */
   retention: {
     closedAccount: '12 months',
     closedConcern: '3 years',
     technicalLogs: '12 months',
   },
 
-  /** Privacy Policy s8 — hosting location statement. TODO(legal): confirm. */
-  hostingStatement: 'Our primary hosting is located in the Kingdom.',
+  /** Privacy Policy s8 — hosting location statement. */
+  hostingStatement: 'Our primary hosting is located in the Kingdom of Saudi Arabia.',
 
   /**
    * Privacy Policy s7 — optional list of processor categories.
