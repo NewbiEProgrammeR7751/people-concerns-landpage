@@ -71,7 +71,7 @@ export const company = {
   officeHours: 'Sunday to Thursday, 9:00 AM to 5:00 PM',
 
   /** Personal Data Protection Officer named in the Privacy Policy (s1, s19). */
-  dpoName: 'Rawad Medhir',
+  dpoName: 'Hussam Medher',
 
   /** Terms s14 — liability cap for the free tier. */
   liabilityCap: 'SAR 500',

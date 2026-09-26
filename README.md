@@ -142,7 +142,7 @@ Filled from the Commercial Registration and the National Address certificate:
 | `city`, `courtCity` | Riyadh |
 | `phone` | 0555578897 (displayed as-is; `phoneE164` backs the `tel:` link) |
 | `officeHours` | Sunday to Thursday, 9:00 AM to 5:00 PM |
-| `dpoName` | Rawad Medhir |
+| `dpoName` | Hussam Medher |
 | `liabilityCap` | SAR 500 |
 | `retention.closedAccount` / `.closedConcern` / `.technicalLogs` | 12 months / 3 years / 12 months |
 | `hostingStatement` | primary hosting in the Kingdom |
