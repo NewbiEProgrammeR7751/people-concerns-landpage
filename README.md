@@ -121,8 +121,9 @@ the print stylesheet all carry over.
 
 Routing is `src/router.tsx` — a ~50-line history router, no dependency. Vite's
 dev and preview servers already fall back to `index.html`, so deep links work
-locally. **On a static host, add the same SPA rewrite** (`/*` → `/index.html`),
-or those two URLs 404 on a hard refresh. Unknown paths render the landing page.
+locally; `vercel.json` carries the same rewrite for production. **On any other
+static host, add that rewrite** (`/*` → `/index.html`), or those two URLs 404 on
+a hard refresh. Unknown paths render the landing page.
 
 ### Filling in the legal values
 
@@ -200,21 +201,46 @@ it — the reason is in the server log, never in the response).
 
 ### Deploying the templates
 
-The route reads the two template files from `emails/` at runtime. Bundled
-function runtimes prune files they cannot see statically, so include them
-explicitly — on Vercel:
-
-```json
-{ "functions": { "api/concern-received.*": { "includeFiles": "emails/**" } } }
-```
-
-Otherwise the route returns 500 `template_unavailable`.
+The route reads the two template files from `emails/` at runtime, and bundled
+function runtimes prune files they cannot see statically. `vercel.json` includes
+them explicitly; without that the route returns 500 `template_unavailable`.
 
 ### Rate limiting
 
 The in-process limiter in the handler is a brake, not a guarantee: state resets
 on cold start and is not shared between instances. Put a real limiter in front
 before the form sees meaningful traffic.
+
+## Deploying on Vercel
+
+`vercel.json` holds the two things a static host needs, and nothing else — the
+build is auto-detected from `package.json`.
+
+```json
+{
+  "functions": {
+    "api/concern-received.*": { "includeFiles": "emails/**", "maxDuration": 30 }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+- **`rewrites`** serves `index.html` for unknown paths, so `/terms-and-conditions`
+  and `/privacy-policy` survive a hard refresh. The `/(.*)` source matches every
+  path including `/api/…`, which is safe: Vercel gives "precedence to the
+  filesystem prior to rewrites being applied", so static files and functions are
+  served before the rewrite is consulted.
+- **`includeFiles`** bundles `emails/**` into the email function. The glob key
+  matches only `api/concern-received.ts`, leaving `api/github-activity.ts` on the
+  defaults.
+- **`maxDuration: 30`** covers two sequential provider calls. The handler allows
+  the mail provider 10s per send and may send twice — the member confirmation and
+  the internal copy — which can exceed a 10s default limit and kill the function
+  *after* the confirmation has gone out, so the form would report a failure for an
+  email that was actually delivered.
+
+Set `RESEND_API_KEY` and `PUBLIC_SITE_URL` in the project's environment
+variables; they are not in the repo.
 
 ## Layout
 
