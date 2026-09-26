@@ -144,14 +144,12 @@ Filled from the Commercial Registration and the National Address certificate:
 | `officeHours` | Sunday to Thursday, 9:00 AM to 5:00 PM |
 | `dpoName` | Rawad Medhir |
 | `liabilityCap` | SAR 500 |
-| `retention.closedConcern` / `.technicalLogs` | 3 years / 12 months |
+| `retention.closedAccount` / `.closedConcern` / `.technicalLogs` | 12 months / 3 years / 12 months |
 | `hostingStatement` | primary hosting in the Kingdom |
 
-One value is still open, flagged `TODO(legal)`:
-
-| Field | Needs |
-| --- | --- |
-| `retention.closedAccount` | how long account data is kept after closure — left at 12 months to match the technical-log period |
+Every value is now confirmed; no `TODO(legal)` markers remain. The retention
+periods are published commitments — shortening one means destroying data sooner
+than the policy a member already read.
 
 Both documents were drafted for the PDPL and its Implementing Regulations. Have
 a Saudi-licensed lawyer review them before publishing.

@@ -4,10 +4,11 @@
  *
  * Values come from the Commercial Registration and the National Address
  * certificate. The pages render them verbatim, so editing a value here updates
- * every place it appears in both documents.
+ * every place it appears in both documents — and the confirmation email, which
+ * reads its contact details from the same object.
  *
- * Anything still marked  TODO(legal)  needs a decision from the business before
- * the pages go live.
+ * These are published legal statements, not copy. Changing one changes what the
+ * business has committed to in a document members have already read.
  */
 
 export const company = {
@@ -76,12 +77,9 @@ export const company = {
   liabilityCap: 'SAR 500',
 
   /**
-   * Privacy Policy s10 — retention periods, one per row of the table.
-   *
-   * TODO(legal): `closedAccount` is the one period the National Address update
-   * did not specify. It is left at 12 months, matching the technical-log period;
-   * confirm or change it. The other two are as instructed: technical logs 12
-   * months, concerns and correspondence 3 years.
+   * Privacy Policy s10 — retention periods, one per row of the table. These are
+   * published commitments: shortening one means destroying data sooner than the
+   * policy a member already read, so change them deliberately.
    */
   retention: {
     closedAccount: '12 months',

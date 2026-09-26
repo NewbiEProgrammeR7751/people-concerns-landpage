@@ -18,7 +18,7 @@ import LegalLayout, {
  * Have a Saudi-licensed lawyer review before publishing.
  *
  * Every value the source marked with <mark class="fill"> now reads from
- * `src/content/company.ts`; the outstanding ones are flagged TODO(legal) there.
+ * `src/content/company.ts`.
  */
 
 export const ROUTE = '/terms-and-conditions'
