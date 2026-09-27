@@ -100,8 +100,16 @@ export const company = {
   cookieSettingsPath: '/#cookie-settings',
 } as const
 
-/** Both legal documents share one version and revision date. */
+/**
+ * Both legal documents share one version and revision date. The date is written
+ * out per language rather than formatted from an ISO value: `Intl` with the
+ * `ar-SA` locale defaults to the Hijri calendar and Arabic-Indic digits, which
+ * is a bigger editorial decision than a date format should be making on its own.
+ */
 export const legalRevision = {
   version: '1.0',
-  lastUpdated: '23 September 2026',
+  lastUpdated: {
+    en: '23 September 2026',
+    ar: '23 سبتمبر 2026',
+  },
 } as const

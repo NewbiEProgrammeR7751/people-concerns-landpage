@@ -139,6 +139,23 @@ nav a:hover {
 }
 
 /* ── Legal documents (Terms, Privacy Policy) ───────────────────────────────
+   Headings use the site's display face in English and Cairo in Arabic, matching
+   the landing page. Applied as a class rather than per-element inline styles so
+   the language switch needs no JS. */
+.legal-heading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.legal-doc[data-legal-lang='ar'] {
+  font-family: 'Cairo', sans-serif;
+}
+
+.legal-doc[data-legal-lang='ar'] .legal-heading {
+  font-family: 'Cairo', sans-serif;
+  letter-spacing: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    The source HTML shipped a print stylesheet that Tailwind utilities can't
    express (@page, columns, break-*). Scoped to .legal-doc so it only affects
    those two pages, and inverted to ink-on-white so a printout is readable. */

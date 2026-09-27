@@ -154,9 +154,10 @@ const t = {
       services: { title: "الخدمات", links: ["تطبيقات الويب", "تطبيقات الجوال", "تصميم UI/UX", "حلول المؤسسات", "الاستراتيجية والاستشارات"] },
       company: { title: "الشركة", links: ["من نحن", "دراسات الحالة", "الوظائف", "المدونة", "تواصل معنا"] },
       copy: "© 2026 People Concerns Ltd. جميع الحقوق محفوظة.",
+      // Arabic readers land on the Arabic documents under /ar/.
       legal: [
-        { label: "سياسة الخصوصية", to: "/privacy-policy" },
-        { label: "الشروط والأحكام", to: "/terms-and-conditions" },
+        { label: "سياسة الخصوصية", to: "/ar/privacy-policy" },
+        { label: "الشروط والأحكام", to: "/ar/terms-and-conditions" },
       ],
     },
   },

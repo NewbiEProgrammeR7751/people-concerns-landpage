@@ -122,8 +122,60 @@ the print stylesheet all carry over.
 Routing is `src/router.tsx` — a ~50-line history router, no dependency. Vite's
 dev and preview servers already fall back to `index.html`, so deep links work
 locally; `vercel.json` carries the same rewrite for production. **On any other
-static host, add that rewrite** (`/*` → `/index.html`), or those two URLs 404 on
-a hard refresh. Unknown paths render the landing page.
+static host, add that rewrite** (`/*` → `/index.html`), or those URLs 404 on a
+hard refresh. Unknown paths render the landing page.
+
+### Bilingual structure
+
+Four routes, two documents, two languages:
+
+| Route | |
+| --- | --- |
+| `/terms-and-conditions`, `/privacy-policy` | English — unchanged paths |
+| `/ar/terms-and-conditions`, `/ar/privacy-policy` | Arabic |
+
+The documents are **data, not JSX** — `src/content/legal/{en,ar}/*.ts` — rendered
+by one component, `src/pages/LegalDocumentPage.tsx`. Duplicating a 450-line JSX
+page per language would guarantee the two drift apart, which for a document that
+governs is a legal problem rather than a tidiness one.
+
+Body text is plain strings with a three-token markup vocabulary, so the files can
+be handed to a legal translator who should not have to read React:
+
+```
+**bold**            emphasis
+[label](/target)    link (internal path, mailto:, tel: or https:)
+{token}             value from src/content/company.ts, e.g. {crNumber}
+```
+
+RTL needs no separate stylesheet: every spacing utility is logical (`ps-`, `ms-`,
+`border-s-`, `text-start`), so the layout mirrors from `dir` alone. Two things are
+pinned LTR on purpose — the brand stripe, because coral-left/teal-right is a brand
+constant rather than a reading-order one, and the wordmark, which is a Latin
+lockup. Arabic headings and body switch to Cairo, matching the landing page.
+
+### ⚠ The Arabic text is not written yet
+
+Only the titles and table of contents are translated. Every section body is
+`blocks: null`, which means:
+
+- the page renders a placeholder for that section,
+- a banner at the top tells the reader the Arabic is incomplete and links to the
+  English,
+- and the page sets `noindex, follow`, so a search engine is never offered a
+  half-empty legal document.
+
+**Do not link `/ar/…` from production until the text is supplied.** Section 19 of
+the English Terms states that where an Arabic version exists and the two conflict,
+*the Arabic version prevails* — so these files become the governing text once
+filled in. They must be written or reviewed by a Saudi-licensed lawyer, not
+machine-translated. Each Arabic file carries the same warning at the top.
+
+A handful of `{token}` values are also still English in the Arabic documents —
+`{nationalAddress}`, `{officeHours}`, `{liabilityCap}`, the retention periods,
+`{hostingStatement}` and `{processorCategories}`. They are legal statements
+rather than labels, so they are listed as `TODO(translation)` in
+`src/content/legal/index.ts` for the same person to supply.
 
 ### Filling in the legal values
 
@@ -253,16 +305,23 @@ public/                     favicon, apple-touch-icon, manifest icons, og-image
   email-assets/             logo referenced by the email at an absolute URL
 src/
   App.tsx                   landing page + EN/AR translations
-  router.tsx                dependency-free history router (3 routes)
+  router.tsx                dependency-free history router
   components/
     RecentActivity.tsx      the live widget
   content/
-    company.ts              legal + contact data for the Terms/Privacy pages
+    company.ts              legal + contact values, one source of truth
+    legal/
+      types.ts              block model and the text markup it supports
+      index.ts              routes, tokens, per-language chrome strings
+      en/terms.ts           English Terms — the source text
+      en/privacy.ts         English Privacy Policy — the source text
+      ar/terms.ts           Arabic Terms — titles done, bodies pending
+      ar/privacy.ts         Arabic Privacy Policy — titles done, bodies pending
   pages/
     LegalLayout.tsx         shared shell and content primitives
-    TermsAndConditions.tsx  /terms-and-conditions
-    PrivacyPolicy.tsx       /privacy-policy
-  index.css                 design tokens, keyframes, legal print styles
+    LegalDocumentPage.tsx   renders either document in either language
+    renderInline.tsx        the **bold** / [link]() / {token} renderer
+  index.css                 design tokens, keyframes, legal print + RTL styles
 vite-plugin-dev-api.ts      serves api/ handlers during dev and preview
 .figma/make/site.json       title, description, icons, social meta
 ```

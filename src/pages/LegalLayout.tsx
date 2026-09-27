@@ -2,24 +2,25 @@ import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import logoIcon from '@/imports/PeopleConcerns_Icon_Transparent_500.png'
 import { company, legalRevision } from '@/content/company'
+import { getTokens, legalRoute, ui, type LegalDocId, type LegalLang } from '@/content/legal'
 import { Link } from '@/router'
 
 /**
- * Shared shell for the Terms and Privacy pages.
+ * Shared shell for the Terms and Privacy pages, in both languages.
  *
  * The source HTML documents shipped a light-on-white stylesheet. That palette is
  * re-expressed here with the site's dark design tokens from index.css, so a
  * visitor arriving from the landing page footer doesn't flash from dark to white.
  * Brand rules from the asset pack still hold: coral left / teal right on the top
  * stripe, and the logo only ever sits on a dark surface.
+ *
+ * Direction is driven by `lang`. The spacing utilities are all logical
+ * (`ps-`, `ms-`, `border-s-`, `text-start`), so RTL needs no separate rules —
+ * only the brand stripe is pinned, because coral-left/teal-right is a brand
+ * constant rather than a reading-order property.
  */
 
 export type TocEntry = { id: string; n: number; title: string }
-
-const LEGAL_LINKS = [
-  { to: '/terms-and-conditions', label: 'Terms and Conditions' },
-  { to: '/privacy-policy', label: 'Privacy Policy' },
-] as const
 
 // ── Content primitives ─────────────────────────────────────────────────────
 // Each mirrors one selector from the source stylesheet.
@@ -43,6 +44,21 @@ export function B({ children }: { children: ReactNode }) {
 export function Note({ children }: { children: ReactNode }) {
   return (
     <div className="mb-3.5 rounded-[10px] border border-[var(--border-subtle)] bg-white/[0.03] px-5 py-4">
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Banner for a document that is not fully translated. Coral rather than teal:
+ * this is a warning about the text's completeness, not a highlight.
+ */
+export function PendingNotice({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="status"
+      className="mb-8 rounded-[10px] border border-[rgba(232,96,80,0.35)] bg-[var(--coral-dim)] px-5 py-4 text-[15px]"
+    >
       {children}
     </div>
   )
@@ -131,14 +147,11 @@ export function ContactTable({ rows }: { rows: [string, ReactNode][] }) {
 }
 
 /** `.summary{background:#EEF6F6;border-radius:10px}` */
-export function ShortVersion({ children }: { children: ReactNode }) {
+export function ShortVersion({ heading, children }: { heading: string; children: ReactNode }) {
   return (
     <div className="mb-10 rounded-[10px] border border-[rgba(42,184,168,0.18)] bg-[var(--teal-dim)] px-5 py-6 sm:px-7">
-      <h2
-        className="mb-2 text-lg font-semibold text-[var(--text-primary)]"
-        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-      >
-        The short version
+      <h2 className="legal-heading mb-2 text-lg font-semibold text-[var(--text-primary)]">
+        {heading}
       </h2>
       {children}
     </div>
@@ -146,7 +159,7 @@ export function ShortVersion({ children }: { children: ReactNode }) {
 }
 
 /**
- * `section h2` with its teal number, plus the 42px indent the source applied to
+ * `section h2` with its number, plus the 42px indent the source applied to
  * everything in a section except the heading. The indent collapses on mobile.
  */
 export function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
@@ -154,8 +167,7 @@ export function Section({ n, title, children }: { n: number; title: string; chil
     <section id={`s${n}`} aria-labelledby={`h${n}`} className="mb-7 scroll-mt-8 pt-2">
       <h2
         id={`h${n}`}
-        className="mb-3 flex items-baseline gap-3.5 text-[22px] leading-[1.35] font-semibold text-[var(--text-primary)]"
-        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        className="legal-heading mb-3 flex items-baseline gap-3.5 text-[22px] leading-[1.35] font-semibold text-[var(--text-primary)]"
       >
         <span className="min-w-[28px] font-bold text-[var(--teal)]">{n}.</span>
         <span>{title}</span>
@@ -167,19 +179,24 @@ export function Section({ n, title, children }: { n: number; title: string; chil
 
 // ── Chrome ─────────────────────────────────────────────────────────────────
 
-/** `.stripe` — coral left, teal right. Never swapped (brand rule). */
+/**
+ * `.stripe` — coral then teal. Pinned with physical `flex-row` because the
+ * brand guidelines fix coral on the left and teal on the right; unlike the rest
+ * of the layout it must not mirror in RTL.
+ */
 function BrandStripe() {
   return (
-    <div className="flex h-1.5" aria-hidden="true">
+    <div className="flex h-1.5 flex-row" aria-hidden="true" dir="ltr">
       <span className="flex-1 bg-[var(--coral)]" />
       <span className="flex-1 bg-[var(--teal)]" />
     </div>
   )
 }
 
+/** The wordmark is a Latin lockup and stays LTR in both languages. */
 function Wordmark({ size }: { size: number }) {
   return (
-    <span className="flex items-center gap-2.5">
+    <span className="flex flex-row items-center gap-2.5" dir="ltr">
       <img src={logoIcon} width={size} height={size} alt="" className="block" />
       <span style={{ fontFamily: "'Nunito', sans-serif", lineHeight: 1.05 }}>
         <span className="block font-extrabold text-[var(--text-primary)]">People</span>
@@ -189,7 +206,57 @@ function Wordmark({ size }: { size: number }) {
   )
 }
 
-function TableOfContents({ items }: { items: TocEntry[] }) {
+function LegalNav({
+  lang,
+  current,
+  className,
+}: {
+  lang: LegalLang
+  current: string
+  className?: string
+}) {
+  const strings = ui[lang]
+  const links: { to: string; label: string }[] = [
+    { to: legalRoute('terms', lang), label: strings.terms },
+    { to: legalRoute('privacy', lang), label: strings.privacy },
+  ]
+
+  return (
+    <nav aria-label={strings.legalDocuments} className={className}>
+      {links.map((l) => (
+        <Link
+          key={l.to}
+          to={l.to}
+          aria-current={l.to === current ? 'page' : undefined}
+          className={`text-[13px] font-medium underline decoration-2 underline-offset-[3px] transition-colors sm:text-sm ${
+            l.to === current
+              ? 'text-[var(--text-primary)] decoration-[var(--coral)]'
+              : 'text-[var(--text-secondary)] decoration-[var(--teal)] hover:text-[var(--teal)]'
+          }`}
+        >
+          {l.label}
+        </Link>
+      ))}
+    </nav>
+  )
+}
+
+/** Switches to the same document in the other language. */
+function LanguageSwitch({ lang, docId }: { lang: LegalLang; docId: LegalDocId }) {
+  const other: LegalLang = lang === 'en' ? 'ar' : 'en'
+  return (
+    <Link
+      to={legalRoute(docId, other)}
+      lang={ui[other].htmlLang}
+      hrefLang={ui[other].htmlLang}
+      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.04] px-3 py-1.5 text-[13px] font-medium text-[var(--text-secondary)] no-underline transition-colors hover:border-[var(--teal)] hover:text-[var(--teal)]"
+    >
+      {ui[lang].switchTo}
+    </Link>
+  )
+}
+
+function TableOfContents({ items, label }: { items: TocEntry[]; label: string }) {
   // The source script collapsed the list below 960px; matchMedia keeps that
   // behaviour without reaching into the DOM after render.
   const [open, setOpen] = useState(() => !window.matchMedia('(max-width: 1023px)').matches)
@@ -201,9 +268,9 @@ function TableOfContents({ items }: { items: TocEntry[] }) {
       className="self-start rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-4 text-sm leading-[1.5] lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-auto lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0"
     >
       <summary className="cursor-pointer list-none font-semibold text-[var(--text-primary)] [&::-webkit-details-marker]:hidden">
-        Contents
+        {label}
       </summary>
-      <nav aria-label="Contents" className="mt-3">
+      <nav aria-label={label} className="mt-3">
         <ol className="list-none p-0 border-s-2 border-[var(--border-subtle)]">
           {items.map((item) => (
             <li key={item.id}>
@@ -222,40 +289,36 @@ function TableOfContents({ items }: { items: TocEntry[] }) {
   )
 }
 
-function SiteHeader({ title, current }: { title: string; current: string }) {
+function SiteHeader({
+  lang,
+  title,
+  current,
+  docId,
+}: {
+  lang: LegalLang
+  title: string
+  current: string
+  docId: LegalDocId
+}) {
+  const strings = ui[lang]
   return (
     <header className="bg-[var(--bg-surface)]">
       <div className="mx-auto max-w-[1120px] px-5 md:px-8">
         <div className="flex flex-col items-start gap-3.5 py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <Link to="/" aria-label="People concerns home" className="no-underline">
+          <Link to="/" aria-label={strings.home} className="no-underline">
             <Wordmark size={34} />
           </Link>
-          <nav aria-label="Legal documents" className="flex gap-4 sm:gap-5">
-            {LEGAL_LINKS.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                aria-current={l.to === current ? 'page' : undefined}
-                className={`text-[13px] font-medium underline decoration-2 underline-offset-[3px] transition-colors sm:text-sm ${
-                  l.to === current
-                    ? 'text-[var(--text-primary)] decoration-[var(--coral)]'
-                    : 'text-[var(--text-secondary)] decoration-[var(--teal)] hover:text-[var(--teal)]'
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-5">
+            <LegalNav lang={lang} current={current} className="flex gap-4 sm:gap-5" />
+            <LanguageSwitch lang={lang} docId={docId} />
+          </div>
         </div>
         <div className="pb-8 pt-4 md:pb-12 md:pt-6">
-          <h1
-            className="mb-2 text-[32px] leading-[1.15] font-bold tracking-[-0.01em] text-[var(--text-primary)] md:text-[44px]"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
+          <h1 className="legal-heading mb-2 text-[32px] leading-[1.15] font-bold tracking-[-0.01em] text-[var(--text-primary)] md:text-[44px]">
             {title}
           </h1>
           <p className="text-[15px] text-[var(--text-secondary)]">
-            Last updated {legalRevision.lastUpdated}, version {legalRevision.version}
+            {strings.lastUpdated(legalRevision.lastUpdated[lang], legalRevision.version)}
           </p>
         </div>
       </div>
@@ -263,7 +326,9 @@ function SiteHeader({ title, current }: { title: string; current: string }) {
   )
 }
 
-function SiteFooter({ current }: { current: string }) {
+function SiteFooter({ lang, current }: { lang: LegalLang; current: string }) {
+  const strings = ui[lang]
+  const { shortAddress } = getTokens(lang)
   return (
     <footer className="bg-[var(--bg-surface)] text-sm text-[var(--text-secondary)]">
       <div className="mx-auto flex max-w-[1120px] flex-wrap justify-between gap-6 px-5 py-9 md:px-8">
@@ -271,10 +336,11 @@ function SiteFooter({ current }: { current: string }) {
           <Link to="/" className="mb-3 inline-block no-underline">
             <Wordmark size={28} />
           </Link>
-          <div>{company.shortAddress}</div>
+          <div>{shortAddress}</div>
           <div>
             <a
               href={`mailto:${company.supportEmail}`}
+              dir="ltr"
               className="text-[var(--text-primary)] no-underline hover:text-[var(--teal)]"
             >
               {company.supportEmail}
@@ -282,23 +348,26 @@ function SiteFooter({ current }: { current: string }) {
           </div>
         </div>
         <div className="self-end">
-          <nav aria-label="Footer" className="mb-2 flex flex-wrap gap-5">
+          <nav aria-label={strings.footerNav} className="mb-2 flex flex-wrap gap-5">
             <Link to="/" className="text-[var(--text-primary)] no-underline hover:text-[var(--teal)]">
-              Home
+              {strings.home}
             </Link>
-            {LEGAL_LINKS.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                aria-current={l.to === current ? 'page' : undefined}
-                className="text-[var(--text-primary)] no-underline hover:text-[var(--teal)]"
-              >
-                {l.label}
-              </Link>
-            ))}
+            {(['terms', 'privacy'] as LegalDocId[]).map((id) => {
+              const to = legalRoute(id, lang)
+              return (
+                <Link
+                  key={id}
+                  to={to}
+                  aria-current={to === current ? 'page' : undefined}
+                  className="text-[var(--text-primary)] no-underline hover:text-[var(--teal)]"
+                >
+                  {strings[id]}
+                </Link>
+              )
+            })}
           </nav>
           <div className="text-xs text-[var(--text-muted)]">
-            © 2026 {company.name}. All rights reserved.
+            {strings.copyright(2026, company.name)}
           </div>
         </div>
       </div>
@@ -309,61 +378,119 @@ function SiteFooter({ current }: { current: string }) {
 // ── Layout ─────────────────────────────────────────────────────────────────
 
 type LegalLayoutProps = {
+  lang: LegalLang
   /** Route of the page being rendered, used for aria-current. */
   route: string
+  docId: LegalDocId
   title: string
   /** <title> and meta description for the document head. */
   documentTitle: string
   metaDescription: string
   toc: TocEntry[]
+  contentsLabel: string
+  /** Keeps an untranslated document out of search results. */
+  noindex?: boolean
   children: ReactNode
 }
 
+/** Creates or updates a <meta>/<link> in the head, returning a cleanup function. */
+function upsertHeadTag(
+  selector: string,
+  create: () => HTMLElement,
+  apply: (el: HTMLElement) => void,
+): () => void {
+  const existing = document.head.querySelector<HTMLElement>(selector)
+  if (existing) {
+    const previous = existing.cloneNode(true) as HTMLElement
+    apply(existing)
+    return () => existing.replaceWith(previous)
+  }
+  const created = create()
+  apply(created)
+  document.head.appendChild(created)
+  return () => created.remove()
+}
+
 export default function LegalLayout({
+  lang,
   route,
+  docId,
   title,
   documentTitle,
   metaDescription,
   toc,
+  contentsLabel,
+  noindex = false,
   children,
 }: LegalLayoutProps) {
-  // These pages are reached client-side, so the head is set on mount. The
-  // landing page owns dir/lang; the legal copy is English-only for now — both
-  // documents state that an Arabic version prevails if one is published.
+  const strings = ui[lang]
+
+  // These pages are reached client-side, so the head is maintained on mount and
+  // restored on unmount — the landing page owns dir/lang the rest of the time.
   useEffect(() => {
     const previousTitle = document.title
-    document.title = documentTitle
-    document.documentElement.dir = 'ltr'
-    document.documentElement.lang = 'en'
+    const previousDir = document.documentElement.dir
+    const previousLang = document.documentElement.lang
 
-    let meta = document.querySelector<HTMLMetaElement>('meta[name="description"]')
-    if (!meta) {
-      meta = document.createElement('meta')
-      meta.name = 'description'
-      document.head.appendChild(meta)
+    document.title = documentTitle
+    document.documentElement.dir = strings.dir
+    document.documentElement.lang = strings.htmlLang
+
+    const cleanups = [
+      upsertHeadTag(
+        'meta[name="description"]',
+        () => Object.assign(document.createElement('meta'), { name: 'description' }),
+        (el) => el.setAttribute('content', metaDescription),
+      ),
+      // hreflang alternates, so each language is offered to the right reader.
+      ...(['en', 'ar'] as LegalLang[]).map((l) =>
+        upsertHeadTag(
+          `link[rel="alternate"][hreflang="${ui[l].htmlLang}"]`,
+          () => Object.assign(document.createElement('link'), { rel: 'alternate' }),
+          (el) => {
+            el.setAttribute('hreflang', ui[l].htmlLang)
+            el.setAttribute('href', new URL(legalRoute(docId, l), window.location.origin).href)
+          },
+        ),
+      ),
+    ]
+
+    if (noindex) {
+      cleanups.push(
+        upsertHeadTag(
+          'meta[name="robots"]',
+          () => Object.assign(document.createElement('meta'), { name: 'robots' }),
+          (el) => el.setAttribute('content', 'noindex, follow'),
+        ),
+      )
     }
-    const previousDescription = meta.content
-    meta.content = metaDescription
 
     return () => {
       document.title = previousTitle
-      meta.content = previousDescription
+      document.documentElement.dir = previousDir
+      document.documentElement.lang = previousLang
+      for (const undo of cleanups) undo()
     }
-  }, [documentTitle, metaDescription])
+  }, [documentTitle, metaDescription, strings.dir, strings.htmlLang, docId, noindex])
 
   return (
-    <div className="legal-doc min-h-full bg-[var(--bg-deep)] text-[16px] leading-[1.7] text-[var(--text-secondary)]">
+    <div
+      className="legal-doc min-h-full bg-[var(--bg-deep)] text-[16px] leading-[1.7] text-[var(--text-secondary)]"
+      lang={strings.htmlLang}
+      dir={strings.dir}
+      data-legal-lang={lang}
+    >
       <a
         href="#content"
         className="absolute start-3 top-3 z-10 -translate-y-20 rounded bg-[var(--bg-card)] px-3.5 py-2 text-[var(--text-primary)] transition-transform focus:translate-y-0"
       >
-        Skip to content
+        {strings.skipToContent}
       </a>
       <BrandStripe />
-      <SiteHeader title={title} current={route} />
+      <SiteHeader lang={lang} title={title} current={route} docId={docId} />
 
       <div className="mx-auto grid max-w-[1120px] grid-cols-1 gap-6 px-4 pb-12 pt-6 sm:px-5 lg:grid-cols-[250px_minmax(0,1fr)] lg:gap-14 lg:px-8 lg:pb-[72px] lg:pt-12">
-        <TableOfContents items={toc} />
+        <TableOfContents items={toc} label={contentsLabel} />
         <main
           id="content"
           className="min-w-0 max-w-[780px] rounded-[14px] border border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-8 sm:px-8 lg:px-14 lg:py-12"
@@ -372,7 +499,7 @@ export default function LegalLayout({
         </main>
       </div>
 
-      <SiteFooter current={route} />
+      <SiteFooter lang={lang} current={route} />
     </div>
   )
 }
