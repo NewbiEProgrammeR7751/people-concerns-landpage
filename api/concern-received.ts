@@ -29,7 +29,19 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const UPSTREAM_TIMEOUT_MS = 10_000;
 
 /** Field limits — generous for a person, tight enough to bound the payload. */
-const LIMITS = { name: 120, email: 254, company: 160, message: 5_000 } as const;
+const LIMITS = { name: 120, email: 254, phone: 40, message: 5_000 } as const;
+
+/** The chips on the contact form. Anything else is ignored rather than rejected. */
+const PROJECT_TYPES = ["app", "website", "system", "unsure"] as const;
+type ProjectType = (typeof PROJECT_TYPES)[number];
+
+/** How each chip reads in the subject line and the team notification. */
+const PROJECT_TYPE_LABEL: Record<ProjectType, string> = {
+  app: "App",
+  website: "Website",
+  system: "System",
+  unsure: "Not sure yet",
+};
 
 /** Best-effort abuse brake, per IP. See `rateLimited()`. */
 const RATE_LIMIT = { max: 5, windowMs: 10 * 60 * 1000 } as const;
@@ -40,8 +52,14 @@ const RATE_LIMIT = { max: 5, windowMs: 10 * 60 * 1000 } as const;
 type Submission = {
   name: string;
   email: string;
-  company: string;
+  /** Phone number — the channel the sender asked to be reached on. */
+  phone: string;
+  /** Which chip was selected, if any. */
+  projectType: ProjectType | null;
+  /** Optional: the form does not require a description. */
   message: string;
+  /** Which language the form was filled in. */
+  lang: "en" | "ar";
 };
 
 type Template = { html: string; text: string };
@@ -294,25 +312,33 @@ export async function POST(request: Request): Promise<Response> {
   const source = body as Record<string, unknown>;
   const name = requireString(source, "name");
   const email = requireString(source, "email");
-  const message = requireString(source, "message");
-  const companyName = requireString(source, "company", true);
+  const phone = requireString(source, "phone");
+  // Optional: a business owner who picks a chip has already said enough.
+  const message = requireString(source, "message", true);
 
-  if (name === null || email === null || message === null || companyName === null) {
+  if (name === null || email === null || phone === null || message === null) {
     return fail(400, "invalid_fields");
   }
   if (!isEmail(email)) return fail(400, "invalid_email");
 
+  const projectType = PROJECT_TYPES.includes(source.projectType as ProjectType)
+    ? (source.projectType as ProjectType)
+    : null;
+  const lang = source.lang === "ar" ? "ar" : "en";
+
   const now = new Date();
   const reference = makeReference(now);
-  // The form has no subject field, so the company name (or the sender's name)
-  // stands in as the short title the template shows.
-  const subject = companyName ? `New project enquiry — ${companyName}` : "New project enquiry";
+  // The form has no subject field, so the selected chip stands in as the short
+  // title the template shows.
+  const subject = projectType
+    ? `New enquiry — ${PROJECT_TYPE_LABEL[projectType]}`
+    : "New enquiry";
 
   const concernUrl = config.trackingTemplate
     ? config.trackingTemplate.replace("{reference}", encodeURIComponent(reference))
     : `${config.siteUrl}/#contact`;
 
-  const submission: Submission = { name, email, company: companyName, message };
+  const submission: Submission = { name, email, phone, projectType, message, lang };
 
   const values: Record<string, string> = {
     member_name: firstName(name),
@@ -390,11 +416,13 @@ function internalNotification(submission: Submission, reference: string, submitt
     `Submitted: ${submittedAt}`,
     "",
     `Name:    ${submission.name}`,
+    `Phone:   ${submission.phone}`,
     `Email:   ${submission.email}`,
-    `Company: ${submission.company || "—"}`,
+    `Wants:   ${submission.projectType ? PROJECT_TYPE_LABEL[submission.projectType] : "—"}`,
+    `Form in: ${submission.lang === "ar" ? "Arabic" : "English"}`,
     "",
     "Message:",
-    submission.message,
+    submission.message || "(none given — the message field is optional)",
     "",
     `Reply to this email to answer ${submission.name} directly.`,
   ].join("\n");

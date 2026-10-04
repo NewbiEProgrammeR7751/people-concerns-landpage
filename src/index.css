@@ -6,18 +6,27 @@ html, body, #root {
 }
 
 :root {
-  --bg-deep: #080e1a;
-  --bg-surface: #0d1623;
-  --bg-card: #111d2e;
-  --border-subtle: rgba(255,255,255,0.07);
-  --teal: #2ab8a8;
-  --teal-dim: rgba(42,184,168,0.12);
-  --teal-glow: rgba(42,184,168,0.25);
-  --coral: #e86050;
-  --coral-dim: rgba(232,96,80,0.12);
-  --text-primary: #f0f4ff;
-  --text-secondary: #8fa3bf;
-  --text-muted: #4d6280;
+  --bg-deep: #081422;
+  --bg-surface: #0c1a2b;
+  --bg-card: #13202F;
+  --border-subtle: rgba(255,255,255,0.09);
+  --border-strong: rgba(255,255,255,0.16);
+
+  --teal: #4FB3A0;
+  --teal-dim: rgba(79,179,160,0.14);
+  --teal-glow: rgba(79,179,160,0.28);
+  /* Text laid on a solid --teal fill. Teal is light enough that white fails
+     contrast against it, so filled buttons take navy ink instead. */
+  --on-teal: #0B1422;
+
+  --coral: #E8836F;
+  --coral-dim: rgba(232,131,111,0.14);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #C9D3E0;
+  /* Form labels and fine print. Lightened from the old #4d6280, which sat near
+     2:1 on --bg-deep; this clears 4.5:1 so labels are readable, not decorative. */
+  --text-muted: #A9B4C4;
 }
 
 * {
@@ -68,14 +77,14 @@ h1, h2, h3, h4, h5, h6 {
 .glow-pulse { animation: pulse-glow 3s ease-in-out infinite; }
 
 .glass-card {
-  background: rgba(17, 29, 46, 0.6);
+  background: rgba(19, 32, 47, 0.6);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
 }
 
 .teal-glow-text {
-  background: linear-gradient(135deg, var(--teal), #5ae0d4);
+  background: linear-gradient(135deg, var(--teal), #7FD9C6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -92,40 +101,64 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .service-card.featured:hover {
-  border-color: rgba(42,184,168,0.45) !important;
-  box-shadow: 0 0 40px rgba(42,184,168,0.12), 0 24px 56px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+  border-color: rgba(79,179,160,0.45) !important;
+  box-shadow: 0 0 40px rgba(79,179,160,0.12), 0 24px 56px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 .step-connector {
   background: linear-gradient(90deg, var(--teal), transparent);
 }
 
-/* Recent Activity feed — rows slide up in sequence via an inline animation-delay. */
-@keyframes activity-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* Reveal-on-scroll for the process steps, so 02–04 are not dimmed to look
+   disabled — they light up as they arrive. Visible by default, so the content is
+   never hidden if the observer never fires. */
+.reveal {
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
-.activity-row {
-  opacity: 0;
-  animation: activity-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+.reveal[data-revealed='false'] {
+  opacity: 0.55;
+  transform: translateY(10px);
 }
 
-@keyframes activity-live-pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(42,184,168,0.5); }
-  50%      { opacity: 0.55; box-shadow: 0 0 0 3px rgba(42,184,168,0); }
+.reveal[data-revealed='true'] {
+  opacity: 1;
+  transform: none;
 }
 
-.activity-live-dot {
-  animation: activity-live-pulse 2s ease-in-out infinite;
+/* Every interactive control clears the 44×·44px touch minimum. Applied as a
+   class so it can sit on links, buttons and chips alike. */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* FAQ disclosure chevron — rotates from the <details> open state, no JS. */
+.faq-chevron {
+  transition: transform 0.2s ease;
+}
+
+.faq-item[open] .faq-chevron {
+  transform: rotate(180deg);
+}
+
+/* Arrows point along the reading direction, so they mirror in Arabic. */
+[dir='rtl'] .dir-arrow {
+  transform: scaleX(-1);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .activity-row {
+  .reveal,
+  .reveal[data-revealed='false'] {
     opacity: 1;
-    animation: none;
+    transform: none;
+    transition: none;
   }
-  .activity-live-dot {
+
+  .float-1,
+  .float-2,
+  .float-3,
+  .glow-pulse {
     animation: none;
   }
 }

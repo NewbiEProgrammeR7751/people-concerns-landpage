@@ -57,7 +57,7 @@ export function PendingNotice({ children }: { children: ReactNode }) {
   return (
     <div
       role="status"
-      className="mb-8 rounded-[10px] border border-[rgba(232,96,80,0.35)] bg-[var(--coral-dim)] px-5 py-4 text-[15px]"
+      className="mb-8 rounded-[10px] border border-[color-mix(in_srgb,var(--coral)_35%,transparent)] bg-[var(--coral-dim)] px-5 py-4 text-[15px]"
     >
       {children}
     </div>
@@ -149,7 +149,7 @@ export function ContactTable({ rows }: { rows: [string, ReactNode][] }) {
 /** `.summary{background:#EEF6F6;border-radius:10px}` */
 export function ShortVersion({ heading, children }: { heading: string; children: ReactNode }) {
   return (
-    <div className="mb-10 rounded-[10px] border border-[rgba(42,184,168,0.18)] bg-[var(--teal-dim)] px-5 py-6 sm:px-7">
+    <div className="mb-10 rounded-[10px] border border-[color-mix(in_srgb,var(--teal)_25%,transparent)] bg-[var(--teal-dim)] px-5 py-6 sm:px-7">
       <h2 className="legal-heading mb-2 text-lg font-semibold text-[var(--text-primary)]">
         {heading}
       </h2>
