@@ -15,53 +15,8 @@ export type Lang = 'en' | 'ar'
 export const SECTIONS = {
   whatWeBuild: 'what-we-build',
   howItWorks: 'how-it-works',
-  faq: 'faq',
   contact: 'contact',
 } as const
-
-/** What the FAQ says about price, given the values in company.ts. */
-function priceAnswer(lang: Lang): string {
-  const { websiteFrom, appFrom } = company.pricing
-  if (lang === 'ar') {
-    const parts = [
-      websiteFrom && `تبدأ المواقع من ${websiteFrom}`,
-      appFrom && `والتطبيقات من ${appFrom}`,
-    ].filter(Boolean)
-    return parts.length
-      ? `${parts.join('، ')}. السعر النهائي يعتمد على ما تحتاجه بالضبط، ونعطيك عرضاً مكتوباً بعد مكالمة مجانية — بدون أي التزام.`
-      : 'السعر يعتمد على ما تحتاجه بالضبط. نستمع إليك في مكالمة مجانية، ثم نرسل لك عرضاً مكتوباً بسعر ثابت — بدون أي التزام.'
-  }
-  const parts = [
-    websiteFrom && `Websites start from ${websiteFrom}`,
-    appFrom && `apps from ${appFrom}`,
-  ].filter(Boolean)
-  return parts.length
-    ? `${parts.join(', and ')}. The final price depends on exactly what you need — we send a written fixed price after a free call, with no obligation.`
-    : 'It depends on exactly what you need. We listen on a free call, then send a written fixed price with no obligation.'
-}
-
-/** What the FAQ says about timeframes, given the values in company.ts. */
-function timeAnswer(lang: Lang): string {
-  const { website, app } = company.timelines
-  if (lang === 'ar') {
-    const parts = [
-      website && `الموقع البسيط عادةً ${website}`,
-      app && `والتطبيق عادةً ${app}`,
-    ].filter(Boolean)
-    const opening = parts.length
-      ? `${parts.join('، ')}.`
-      : 'يعتمد على حجم ما تحتاجه.'
-    return `${opening} نعطيك تاريخاً مكتوباً قبل أن نبدأ، ونخبرك مبكراً إن كان هناك ما يهدده.`
-  }
-  const parts = [
-    website && `a straightforward website is usually ${website}`,
-    app && `an app is usually ${app}`,
-  ].filter(Boolean)
-  const opening = parts.length
-    ? `${parts.join(', and ')}.`
-    : 'It depends on the size of what you need.'
-  return `${opening.charAt(0).toUpperCase()}${opening.slice(1)} We give you a date in writing before we start, and tell you early if anything threatens it.`
-}
 
 type Copy = {
   dir: 'ltr' | 'rtl'
@@ -69,7 +24,7 @@ type Copy = {
   /** Label on the language button — always names the language you switch TO. */
   langSwitch: string
   langSwitchAria: string
-  nav: { whatWeBuild: string; howItWorks: string; faq: string; contact: string }
+  nav: { whatWeBuild: string; howItWorks: string; contact: string }
   menuOpen: string
   menuClose: string
   hero: {
@@ -94,7 +49,6 @@ type Copy = {
     steps: { num: string; label: string; desc: string; deliverable: string }[]
   }
   benefits: string[]
-  faq: { h2: string; sub: string; items: { q: string; a: string }[] }
   contact: {
     h2: string
     sub: string
@@ -141,7 +95,6 @@ export const t: Record<Lang, Copy> = {
     nav: {
       whatWeBuild: 'What we build',
       howItWorks: 'How it works',
-      faq: 'FAQ',
       contact: 'Contact',
     },
     menuOpen: 'Open menu',
@@ -234,30 +187,6 @@ export const t: Record<Lang, Copy> = {
 
     benefits: ['Fast', 'Secure', 'Arabic & English', 'Support after launch'],
 
-    faq: {
-      h2: 'Questions people ask first',
-      sub: 'If yours is not here, ask us — we answer within 24 hours.',
-      items: [
-        { q: 'How much does it cost?', a: priceAnswer('en') },
-        { q: 'How long does it take?', a: timeAnswer('en') },
-        {
-          q: 'Do I need to understand technology?',
-          a: 'No. That is our job. We explain things in plain language, avoid jargon, and never ask you to make a technical decision on your own.',
-        },
-        {
-          q: 'Who owns the app or website?',
-          a: "You own 100% of your business data, user accounts, and domain name. We provide the technology as a fully managed service, meaning we retain the intellectual property of the core platform's source code. This allows us to continuously push updates, ensure high security, and maintain the infrastructure without you needing an in-house tech team.",
-        },
-        {
-          q: 'What happens after launch?',
-          a: 'We stay with you. Fixes for anything that breaks are included, and we offer a monthly plan for updates, hosting and small changes. You are never left with something nobody maintains.',
-        },
-        {
-          q: 'Do you work in Arabic and English?',
-          a: 'Yes, both — and we build products that work properly in both, including right-to-left Arabic layouts rather than English screens with Arabic words pasted in.',
-        },
-      ],
-    },
 
     contact: {
       h2: "Have an idea for an app or website? Let's talk.",
@@ -323,7 +252,6 @@ export const t: Record<Lang, Copy> = {
     nav: {
       whatWeBuild: 'ما نبنيه',
       howItWorks: 'كيف نعمل',
-      faq: 'أسئلة شائعة',
       contact: 'تواصل معنا',
     },
     menuOpen: 'فتح القائمة',
@@ -416,30 +344,6 @@ export const t: Record<Lang, Copy> = {
 
     benefits: ['سريع', 'آمن', 'عربي وإنجليزي', 'دعم بعد الإطلاق'],
 
-    faq: {
-      h2: 'أسئلة يسألها الناس أولاً',
-      sub: 'إن لم يكن سؤالك هنا، فاسألنا — نرد خلال 24 ساعة.',
-      items: [
-        { q: 'كم تكلفة المشروع؟', a: priceAnswer('ar') },
-        { q: 'كم يستغرق من وقت؟', a: timeAnswer('ar') },
-        {
-          q: 'هل أحتاج إلى معرفة تقنية؟',
-          a: 'لا. هذه مهمتنا. نشرح الأمور بكلمات واضحة، ونتجنب المصطلحات، ولا نطلب منك أبداً أن تتخذ قراراً تقنياً بنفسك.',
-        },
-        {
-          q: 'لمن تكون ملكية التطبيق أو الموقع؟',
-          a: 'أنت تملك 100% من بيانات عملك وحسابات مستخدميك واسم النطاق. ونحن نقدّم التقنية كخدمة مُدارة بالكامل، أي أننا نحتفظ بالملكية الفكرية للكود المصدري للمنصة الأساسية. وهذا ما يتيح لنا دفع التحديثات باستمرار، وضمان أمان عالٍ، وصيانة البنية التقنية دون أن تحتاج إلى فريق تقني داخلي.',
-        },
-        {
-          q: 'وماذا بعد الإطلاق؟',
-          a: 'نبقى معك. إصلاح أي خلل مشمول، ولدينا خطة شهرية للتحديثات والاستضافة والتعديلات الصغيرة. لن تُترك مع شيء لا يصونه أحد.',
-        },
-        {
-          q: 'هل تعملون بالعربية والإنجليزية؟',
-          a: 'نعم، بالاثنتين — ونبني منتجات تعمل بهما فعلاً، بتصميم عربي من اليمين إلى اليسار، وليس شاشات إنجليزية لُصقت فيها كلمات عربية.',
-        },
-      ],
-    },
 
     contact: {
       h2: 'لديك فكرة لتطبيق أو موقع؟ لنتحدث.',

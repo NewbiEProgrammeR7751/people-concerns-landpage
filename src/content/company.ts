@@ -98,33 +98,6 @@ export const company = {
 
   /** Privacy Policy s14 — where the cookie preferences UI lives. */
   cookieSettingsPath: '/#cookie-settings',
-
-  /**
-   * Starting prices quoted in the landing page FAQ.
-   *
-   * TODO(pricing): supply the real starting figures, e.g. 'SAR 12,000'. They are
-   * published prices the moment the page goes live, so the earlier placeholders
-   * were removed rather than left to ship. While these are null the FAQ answers
-   * the question honestly — "we send a written fixed price after a free call" —
-   * with no number attached.
-   */
-  pricing: {
-    websiteFrom: null as string | null,
-    appFrom: null as string | null,
-  },
-
-  /**
-   * Delivery timeframes quoted in the landing page FAQ, as whole phrases so the
-   * wording stays natural in both languages, e.g. '3 to 5 weeks'.
-   *
-   * TODO(timelines): supply the real ranges. As with pricing, these are
-   * commitments a reader will hold us to, so while they are null the FAQ says we
-   * put a date in writing before starting without naming one.
-   */
-  timelines: {
-    website: null as string | null,
-    app: null as string | null,
-  },
 } as const
 
 /**

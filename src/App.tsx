@@ -79,18 +79,6 @@ function IconX() {
     </svg>
   );
 }
-/** Rotation is driven by CSS on the open <details>, so this needs no state. */
-function IconChevron() {
-  return (
-    <svg
-      className="faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden="true" style={{ flexShrink: 0 }}
-    >
-      <polyline points="6 9 12 15 18 9" />
-    </svg>
-  );
-}
 
 // ── Logo ───────────────────────────────────────────────────────────────────
 
@@ -288,34 +276,6 @@ function SectionHeading({
   );
 }
 
-// ── FAQ ────────────────────────────────────────────────────────────────────
-
-/**
- * Native `<details>` rather than a button plus React state: the answer stays in
- * the DOM when collapsed, so it is indexable by search engines and findable with
- * the browser's own find-in-page. Keyboard handling and the expanded/collapsed
- * announcement come free.
- */
-function FaqItem({ q, a, headingFont }: { q: string; a: string; headingFont: string }) {
-  return (
-    <details
-      className="faq-item rounded-2xl"
-      style={{ background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}
-    >
-      <summary
-        className="tap-target flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-base font-semibold sm:px-6 [&::-webkit-details-marker]:hidden"
-        style={{ color: "var(--text-primary)", fontFamily: headingFont }}
-      >
-        <span>{q}</span>
-        <IconChevron />
-      </summary>
-      <div className="px-5 pb-5 text-sm leading-relaxed sm:px-6" style={{ color: "var(--text-secondary)" }}>
-        {a}
-      </div>
-    </details>
-  );
-}
-
 // ── Main App ───────────────────────────────────────────────────────────────
 
 type Status = "idle" | "sending" | "sent" | "error";
@@ -385,7 +345,6 @@ export default function App() {
   const navLinks = [
     { href: `#${SECTIONS.whatWeBuild}`, label: tx.nav.whatWeBuild },
     { href: `#${SECTIONS.howItWorks}`, label: tx.nav.howItWorks },
-    { href: `#${SECTIONS.faq}`, label: tx.nav.faq },
     { href: `#${SECTIONS.contact}`, label: tx.nav.contact },
   ];
 
@@ -704,18 +663,6 @@ export default function App() {
             </li>
           ))}
         </ul>
-      </section>
-
-      {/* ── FAQ ─────────────────────────────────────────────────────────── */}
-      <section id={SECTIONS.faq} className="py-24" style={{ scrollMarginTop: "4rem" }}>
-        <div className="mx-auto max-w-3xl px-6">
-          <SectionHeading h2={tx.faq.h2} sub={tx.faq.sub} headingFont={headingFont} isAr={isAr} />
-          <div className="space-y-3">
-            {tx.faq.items.map((item) => (
-              <FaqItem key={item.q} q={item.q} a={item.a} headingFont={headingFont} />
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* ── CONTACT ─────────────────────────────────────────────────────── */}

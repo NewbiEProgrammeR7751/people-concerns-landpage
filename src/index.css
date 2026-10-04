@@ -133,15 +133,6 @@ h1, h2, h3, h4, h5, h6 {
   min-width: 44px;
 }
 
-/* FAQ disclosure chevron — rotates from the <details> open state, no JS. */
-.faq-chevron {
-  transition: transform 0.2s ease;
-}
-
-.faq-item[open] .faq-chevron {
-  transform: rotate(180deg);
-}
-
 /* Arrows point along the reading direction, so they mirror in Arabic. */
 [dir='rtl'] .dir-arrow {
   transform: scaleX(-1);
