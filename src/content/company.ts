@@ -61,6 +61,8 @@ export const company = {
   },
 
   supportEmail: 'support@peopleconcerns.com',
+  /** Where contact form submissions are delivered to the team. */
+  contactEmail: 'Contact@peopleconcerns.com',
   privacyEmail: 'privacy@peopleconcerns.com',
   noReplyEmail: 'NoReply@peopleconcerns.com',
 

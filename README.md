@@ -222,7 +222,7 @@ Copy the block from `.env.example` into `.env` and fill in:
 | `RESEND_API_KEY` | **yes** | Resend key. Without it the route returns 500 `not_configured`. |
 | `PUBLIC_SITE_URL` | **yes** | Absolute origin. Every URL in the email is built from it, including the logo. |
 | `CONCERN_FROM_EMAIL` | no | Envelope sender; defaults to `People Concerns <NoReply@peopleconcerns.com>`. |
-| `CONCERNS_INBOX_EMAIL` | recommended | Where the submission itself is forwarded. Unset means the enquiry reaches nobody but the sender. |
+| `CONCERNS_INBOX_EMAIL` | no | Where the submission itself is forwarded; defaults to `Contact@peopleconcerns.com`. |
 | `CONCERN_TRACKING_URL` | no | Template for the "Track your concern" button; `{reference}` is substituted. |
 
 The sending domain must be verified in Resend before mail to external addresses

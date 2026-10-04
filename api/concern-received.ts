@@ -3,9 +3,10 @@
  *
  * Handles a submission from the "Start a Project" / contact form on the landing
  * page: assigns a reference, renders `emails/concern-received.{html,txt}`, and
- * sends the pair as multipart/alternative to the person who wrote in. When
- * CONCERNS_INBOX_EMAIL is set, the submission itself is also forwarded to the
- * team, so nothing is lost after the confirmation goes out.
+ * sends the pair as multipart/alternative to the person who wrote in. The
+ * submission itself is also forwarded to the team (CONCERNS_INBOX_EMAIL, or
+ * company.contactEmail by default), so nothing is lost after the confirmation
+ * goes out.
  *
  * Secrets live in `process.env` (see `.env.example`) and never reach the
  * browser — this module must never be imported from anything under `src/`, or
@@ -241,7 +242,7 @@ function readConfig(): Config | { error: string; detail: string } {
     apiKey,
     from: process.env.CONCERN_FROM_EMAIL?.trim() || `${company.name} <${company.noReplyEmail}>`,
     siteUrl,
-    inbox: process.env.CONCERNS_INBOX_EMAIL?.trim() || null,
+    inbox: process.env.CONCERNS_INBOX_EMAIL?.trim() || company.contactEmail,
     trackingTemplate: process.env.CONCERN_TRACKING_URL?.trim() || null,
   };
 }
