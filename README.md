@@ -225,6 +225,8 @@ Copy the block from `.env.example` into `.env` and fill in:
 | `CONCERNS_INBOX_EMAIL` | no | Where the submission itself is forwarded; defaults to `Contact@peopleconcerns.com`. |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | for tracking | Upstash Redis REST credentials (set automatically by Vercel → Storage → Upstash). Without them nothing is saved and the email's "Track your concern" button links to `#contact`. |
 | `ADMIN_PASSWORD` | for `/admin` | Password for the admin page where the team updates each concern's status. |
+| `VITE_RECAPTCHA_SITE_KEY` / `RECAPTCHA_SECRET_KEY` | for reCAPTCHA | reCAPTCHA v3 keys. Set both or neither: a secret without the site key rejects every submission. The site key is read at build time, so redeploy after changing it. |
+| `RECAPTCHA_MIN_SCORE` | no | Lowest reCAPTCHA score accepted, 0.0–1.0. Defaults to `0.5`. |
 
 The sending domain must be verified in Resend before mail to external addresses
 is delivered. To use a different provider, rewrite `sendEmail()` in

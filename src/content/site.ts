@@ -93,6 +93,13 @@ type Copy = {
     noteLabel: string
     another: string
   }
+  security: {
+    /** Shown in place of the generic error when reCAPTCHA scores the request as a bot. */
+    captchaFailed: string
+    rateLimited: string
+    /** Google's required notice when the badge is hidden, split around its two links. */
+    notice: [before: string, privacy: string, middle: string, terms: string, after: string]
+  }
   footer: {
     tagline: string
     servicesTitle: string
@@ -276,6 +283,12 @@ export const t: Record<Lang, Copy> = {
       another: 'Check another concern',
     },
 
+    security: {
+      captchaFailed: "We couldn't confirm this came from a person. Please refresh the page and try again.",
+      rateLimited: 'Too many attempts. Please wait a few minutes and try again.',
+      notice: ['Protected by reCAPTCHA. The Google ', 'Privacy Policy', ' and ', 'Terms of Service', ' apply.'],
+    },
+
     footer: {
       tagline:
         'People Concerns builds apps, websites and business systems in Riyadh — for businesses that would rather run their work than fight their software.',
@@ -457,6 +470,12 @@ export const t: Record<Lang, Copy> = {
       updatedLabel: 'آخر تحديث',
       noteLabel: 'ملاحظة من الفريق',
       another: 'تتبّع طلب آخر',
+    },
+
+    security: {
+      captchaFailed: 'لم نتمكن من التأكد أن الطلب من شخص حقيقي. يرجى تحديث الصفحة والمحاولة مرة أخرى.',
+      rateLimited: 'محاولات كثيرة. يرجى الانتظار بضع دقائق ثم المحاولة مرة أخرى.',
+      notice: ['محمي بواسطة reCAPTCHA، وتنطبق ', 'سياسة الخصوصية', ' و', 'شروط الخدمة', ' الخاصة بـ Google.'],
     },
 
     footer: {

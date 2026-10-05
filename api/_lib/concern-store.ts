@@ -15,6 +15,9 @@
  */
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { pipeline, storeConfigured } from "./redis.js";
+
+export { storeConfigured };
 
 export const CONCERN_STATUSES = ["received", "in_review", "replied", "closed"] as const;
 export type ConcernStatus = (typeof CONCERN_STATUSES)[number];
@@ -44,45 +47,8 @@ export type PublicConcern = Pick<
 >;
 
 const INDEX_KEY = "concerns:index";
-const STORE_TIMEOUT_MS = 8_000;
 
 const recordKey = (reference: string) => `concern:${reference}`;
-
-type StoreConfig = { url: string; token: string };
-
-function storeConfig(): StoreConfig | null {
-  const url = (process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL)?.trim();
-  const token = (process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN)?.trim();
-  return url && token ? { url: url.replace(/\/+$/, ""), token } : null;
-}
-
-export function storeConfigured(): boolean {
-  return storeConfig() !== null;
-}
-
-/** Runs one or more Redis commands in a single round trip and returns their results in order. */
-async function pipeline(commands: (string | number)[][]): Promise<unknown[]> {
-  const config = storeConfig();
-  if (!config) throw new Error("store not configured");
-
-  const response = await fetch(`${config.url}/pipeline`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${config.token}`, "content-type": "application/json" },
-    body: JSON.stringify(commands),
-    signal: AbortSignal.timeout(STORE_TIMEOUT_MS),
-  });
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`store status ${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const results = (await response.json()) as { result?: unknown; error?: string }[];
-  return results.map((item) => {
-    if (item.error) throw new Error(`store error: ${item.error}`);
-    return item.result;
-  });
-}
-
 function parseRecord(raw: unknown): ConcernRecord | null {
   if (typeof raw !== "string") return null;
   try {

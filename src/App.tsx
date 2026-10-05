@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import logoIcon from "@/imports/PeopleConcerns_Icon_Transparent_500.png";
 import { company } from "@/content/company";
 import { SECTIONS, t, type ConcernStatus, type Lang, type ProjectType } from "@/content/site";
+import { captchaToken, loadRecaptcha, recaptchaEnabled } from "@/lib/recaptcha";
 import { Link } from "@/router";
 
 /**
@@ -276,6 +277,22 @@ function SectionHeading({
   );
 }
 
+/** Google's required wording when the reCAPTCHA badge is hidden (see index.css). */
+function RecaptchaNotice({ lang }: { lang: Lang }) {
+  if (!recaptchaEnabled) return null;
+  const [before, privacy, middle, terms, after] = t[lang].security.notice;
+  const link = { color: "var(--text-secondary)" };
+  return (
+    <p className="text-center text-xs" style={{ color: "var(--text-muted)" }}>
+      {before}
+      <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline" style={link}>{privacy}</a>
+      {middle}
+      <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline" style={link}>{terms}</a>
+      {after}
+    </p>
+  );
+}
+
 // ── Track your concern ─────────────────────────────────────────────────────
 
 const STATUS_ORDER: ConcernStatus[] = ["received", "in_review", "replied", "closed"];
@@ -317,13 +334,16 @@ function TrackSection({
     async (body: { reference: string; token?: string; email?: string }) => {
       setState({ kind: "checking" });
       try {
+        // Only the reference + email path is checked server-side; the emailed token stands on its own.
+        const captcha = body.token ? undefined : await captchaToken("track");
         const response = await fetch("/api/concern-status", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
+          body: JSON.stringify({ ...body, captchaToken: captcha }),
         });
         if (response.status === 404 || response.status === 400) return setState({ kind: "error", message: tx.notFound });
-        if (response.status === 429) return setState({ kind: "error", message: tx.rateLimited });
+        if (response.status === 429) return setState({ kind: "error", message: t[lang].security.rateLimited });
+        if (response.status === 403) return setState({ kind: "error", message: t[lang].security.captchaFailed });
         if (!response.ok) throw new Error(`status ${response.status}`);
         const data = (await response.json()) as { concern: TrackedConcern };
         setState({ kind: "found", concern: data.concern });
@@ -332,7 +352,7 @@ function TrackSection({
         setState({ kind: "error", message: tx.error });
       }
     },
-    [tx],
+    [tx, lang],
   );
 
   // The confirmation email links to /?ref=…&t=…#track. Look it up once, then
@@ -499,6 +519,8 @@ function TrackSection({
                 {state.kind === "checking" ? tx.checking : tx.submit}
               </button>
 
+              <RecaptchaNotice lang={lang} />
+
               {state.kind === "error" && (
                 <div
                   role="alert"
@@ -529,6 +551,10 @@ export default function App() {
   const [status, setStatus] = useState<Status>("idle");
   const [reference, setReference] = useState<string | null>(null);
   const [trackPrefill, setTrackPrefill] = useState<string | null>(null);
+  /** Which message the error box shows. */
+  const [errorKind, setErrorKind] = useState<"generic" | "captcha" | "rate">("generic");
+  /** Honeypot: hidden from people, so only bots fill it. */
+  const [website, setWebsite] = useState("");
 
   const tx = t[lang];
   const isAr = lang === "ar";
@@ -544,6 +570,11 @@ export default function App() {
     const onScroll = () => setScrolled(window.scrollY > 32);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Start reCAPTCHA early: v3 scores better when it has seen the visit, not just the submit.
+  useEffect(() => {
+    loadRecaptcha()?.catch((error) => console.error("[recaptcha]", error));
   }, []);
 
   const serviceIcons = [<IconGlobe />, <IconMobile />, <IconPenTool />, <IconServer />];
@@ -564,13 +595,18 @@ export default function App() {
     if (status === "sending") return;
     setStatus("sending");
 
+    setErrorKind("generic");
     try {
+      const token = await captchaToken("contact");
       const response = await fetch("/api/concern-received", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...formState, projectType, lang }),
+        body: JSON.stringify({ ...formState, projectType, lang, website, captchaToken: token }),
       });
-      if (!response.ok) throw new Error(`status ${response.status}`);
+      if (!response.ok) {
+        setErrorKind(response.status === 403 ? "captcha" : response.status === 429 ? "rate" : "generic");
+        throw new Error(`status ${response.status}`);
+      }
 
       const body = (await response.json()) as { reference?: string };
       setReference(body.reference ?? null);
@@ -1018,6 +1054,20 @@ export default function App() {
                     </div>
                   </fieldset>
 
+                  {/* Honeypot. Off-screen rather than display:none, which some bots skip. */}
+                  <div aria-hidden="true" style={{ position: "absolute", left: "-10000px", width: 1, height: 1, overflow: "hidden" }}>
+                    <label htmlFor="cf-website">Website</label>
+                    <input
+                      id="cf-website"
+                      name="website"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
+                  </div>
+
                   <div>
                     <label htmlFor="cf-name" className="mb-1.5 block text-xs font-medium" style={{ color: "var(--text-muted)" }}>
                       {tx.contact.fields.name.label}
@@ -1106,6 +1156,8 @@ export default function App() {
                     {status === "sending" ? tx.contact.sending : tx.contact.submit}
                   </button>
 
+                  <RecaptchaNotice lang={lang} />
+
                   {status === "error" && (
                     <div
                       role="alert"
@@ -1113,10 +1165,18 @@ export default function App() {
                       style={{ background: "var(--coral-dim)", border: "1px solid rgba(232,131,111,0.35)", color: "var(--text-secondary)" }}
                     >
                       <span className="font-semibold" style={{ color: "var(--coral)" }}>{tx.contact.errorTitle}.</span>{" "}
-                      {tx.contact.errorRetry}{" "}
-                      <a href={`mailto:${company.supportEmail}`} className="underline" style={{ color: "var(--text-primary)" }} dir="ltr">
-                        {company.supportEmail}
-                      </a>
+                      {errorKind === "captcha" ? (
+                        tx.security.captchaFailed
+                      ) : errorKind === "rate" ? (
+                        tx.security.rateLimited
+                      ) : (
+                        <>
+                          {tx.contact.errorRetry}{" "}
+                          <a href={`mailto:${company.supportEmail}`} className="underline" style={{ color: "var(--text-primary)" }} dir="ltr">
+                            {company.supportEmail}
+                          </a>
+                        </>
+                      )}
                     </div>
                   )}
                 </form>

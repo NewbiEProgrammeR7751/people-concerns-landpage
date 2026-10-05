@@ -23,6 +23,8 @@ import { readFile } from "node:fs/promises";
 // Node's ESM loader on Vercel does not resolve extensionless relative imports.
 import { company } from "../src/content/company.js";
 import { createConcern, deleteConcern, storeConfigured } from "./_lib/concern-store.js";
+import { foreignOrigin, overLimit, tooLarge, verifyCaptcha } from "./_lib/guard.js";
+import { clientIp } from "./_lib/http.js";
 
 // Next.js App Router hints — inert in other runtimes.
 export const runtime = "nodejs";
@@ -47,8 +49,11 @@ const PROJECT_TYPE_LABEL: Record<ProjectType, string> = {
   unsure: "Not sure yet",
 };
 
-/** Best-effort abuse brake, per IP. See `rateLimited()`. */
-const RATE_LIMIT = { max: 5, windowMs: 10 * 60 * 1000 } as const;
+/** Submissions allowed per IP and per email address. Counted in Redis, see api/_lib/guard.ts. */
+const IP_LIMIT = { max: 5, windowSeconds: 10 * 60 } as const;
+const EMAIL_LIMIT = { max: 3, windowSeconds: 60 * 60 } as const;
+/** Largest body a real submission can be: the field limits plus a reCAPTCHA token, with headroom. */
+const MAX_BODY_BYTES = 32 * 1024;
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -146,42 +151,6 @@ function requireString(source: Record<string, unknown>, key: keyof typeof LIMITS
   if (!trimmed) return optional ? "" : null;
   if (trimmed.length > LIMITS[key]) return null;
   return trimmed;
-}
-
-// ── Rate limiting ──────────────────────────────────────────────────────────
-
-const hits = new Map<string, number[]>();
-
-/**
- * Best-effort brake on a public endpoint that sends mail. State is per process,
- * so it resets on cold start and is not shared across instances — put a real
- * limiter (provider WAF, Upstash, Vercel Firewall) in front for production
- * traffic. This only blunts a single client hammering one instance.
- */
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
-  recent.push(now);
-  hits.set(ip, recent);
-
-  // Keep the map from growing without bound on a long-lived instance.
-  if (hits.size > 5_000) {
-    for (const [key, times] of hits) {
-      if (times.every((t) => now - t >= RATE_LIMIT.windowMs)) hits.delete(key);
-    }
-  }
-
-  return recent.length > RATE_LIMIT.max;
-}
-
-function clientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  return (
-    forwarded?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    request.headers.get("cf-connecting-ip") ||
-    "unknown"
-  );
 }
 
 // ── Template loading ───────────────────────────────────────────────────────
@@ -299,8 +268,11 @@ export async function POST(request: Request): Promise<Response> {
   const config = readConfig();
   if ("error" in config) return fail(500, config.error, config.detail);
 
-  if (rateLimited(clientIp(request))) {
-    return fail(429, "rate_limited", `ip=${clientIp(request)}`);
+  const ip = clientIp(request);
+  if (foreignOrigin(request)) return fail(403, "forbidden_origin", `origin=${request.headers.get("origin")}`);
+  if (tooLarge(request, MAX_BODY_BYTES)) return fail(413, "too_large");
+  if (await overLimit("contact-ip", ip, IP_LIMIT.max, IP_LIMIT.windowSeconds)) {
+    return fail(429, "rate_limited", `ip=${ip}`);
   }
 
   let body: unknown;
@@ -312,6 +284,15 @@ export async function POST(request: Request): Promise<Response> {
   if (typeof body !== "object" || body === null) return fail(400, "invalid_body");
 
   const source = body as Record<string, unknown>;
+
+  // Honeypot: a field people never see. Anything in it is a bot, which gets a
+  // normal-looking success so it has no signal to adapt to — but nothing is
+  // saved or sent.
+  if (typeof source.website === "string" && source.website.trim()) {
+    console.warn(`[concern-received] honeypot ip=${ip}`);
+    return json({ reference: makeReference(new Date()) }, 202);
+  }
+
   const name = requireString(source, "name");
   const email = requireString(source, "email");
   const phone = requireString(source, "phone");
@@ -322,6 +303,13 @@ export async function POST(request: Request): Promise<Response> {
     return fail(400, "invalid_fields");
   }
   if (!isEmail(email)) return fail(400, "invalid_email");
+
+  const captcha = await verifyCaptcha(source.captchaToken, "contact", ip);
+  if (!captcha.ok) return fail(403, "captcha_failed", `ip=${ip} ${captcha.reason}`);
+
+  if (await overLimit("contact-email", email, EMAIL_LIMIT.max, EMAIL_LIMIT.windowSeconds)) {
+    return fail(429, "rate_limited", `email limit ip=${ip}`);
+  }
 
   const projectType = PROJECT_TYPES.includes(source.projectType as ProjectType)
     ? (source.projectType as ProjectType)

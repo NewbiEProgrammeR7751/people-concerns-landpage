@@ -266,3 +266,10 @@ nav a:hover {
     text-decoration: none;
   }
 }
+
+/* reCAPTCHA v3 badge: hidden, because both forms show Google's required
+   notice text instead (RecaptchaNotice in App.tsx). Google permits this only
+   while that notice is visible. */
+.grecaptcha-badge {
+  visibility: hidden;
+}

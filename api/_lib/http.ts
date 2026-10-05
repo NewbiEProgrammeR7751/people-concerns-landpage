@@ -23,29 +23,6 @@ export function clientIp(request: Request): string {
   );
 }
 
-/**
- * Per-process, best-effort limiter: resets on cold start and is not shared
- * across instances. It only blunts one client hammering one instance.
- */
-export function rateLimiter(max: number, windowMs: number) {
-  const hits = new Map<string, number[]>();
-
-  return function limited(key: string): boolean {
-    const now = Date.now();
-    const recent = (hits.get(key) ?? []).filter((t) => now - t < windowMs);
-    recent.push(now);
-    hits.set(key, recent);
-
-    if (hits.size > 5_000) {
-      for (const [k, times] of hits) {
-        if (times.every((t) => now - t >= windowMs)) hits.delete(k);
-      }
-    }
-
-    return recent.length > max;
-  };
-}
-
 /** Same reference format `makeReference` produces in concern-received.ts. */
 export function isReference(value: unknown): value is string {
   return typeof value === "string" && /^PC-\d{6}-\d{4}$/.test(value);

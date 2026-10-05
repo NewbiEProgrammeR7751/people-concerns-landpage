@@ -9,18 +9,22 @@
  * Returns only status, dates and the team's note — never contact details.
  */
 
-import { clientIp, fail, isReference, json, rateLimiter } from "./_lib/http.js";
+import { clientIp, fail, isReference, json } from "./_lib/http.js";
 import { findByEmail, findByToken, storeConfigured, toPublic } from "./_lib/concern-store.js";
+import { foreignOrigin, overLimit, tooLarge, verifyCaptcha } from "./_lib/guard.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ROUTE = "concern-status";
-const limited = rateLimiter(20, 10 * 60 * 1000);
+const IP_LIMIT = { max: 20, windowSeconds: 10 * 60 } as const;
 
 export async function POST(request: Request): Promise<Response> {
   if (!storeConfigured()) return fail(ROUTE, 500, "not_configured", "KV_REST_API_URL / KV_REST_API_TOKEN unset");
-  if (limited(clientIp(request))) return fail(ROUTE, 429, "rate_limited");
+  const ip = clientIp(request);
+  if (foreignOrigin(request)) return fail(ROUTE, 403, "forbidden_origin", `origin=${request.headers.get("origin")}`);
+  if (tooLarge(request, 8 * 1024)) return fail(ROUTE, 413, "too_large");
+  if (await overLimit("track-ip", ip, IP_LIMIT.max, IP_LIMIT.windowSeconds)) return fail(ROUTE, 429, "rate_limited", `ip=${ip}`);
 
   let body: Record<string, unknown>;
   try {
@@ -36,6 +40,14 @@ export async function POST(request: Request): Promise<Response> {
   const email = typeof body.email === "string" ? body.email.trim() : "";
   if (!isReference(reference) || (!token && !email) || token.length > 100 || email.length > 254) {
     return fail(ROUTE, 400, "invalid_fields");
+  }
+
+  // The emailed token is unguessable on its own. A reference + email lookup is
+  // what someone would script to probe for concerns, so that path needs a
+  // passing reCAPTCHA as well.
+  if (!token) {
+    const captcha = await verifyCaptcha(body.captchaToken, "track", ip);
+    if (!captcha.ok) return fail(ROUTE, 403, "captcha_failed", `ip=${ip} ${captcha.reason}`);
   }
 
   try {
