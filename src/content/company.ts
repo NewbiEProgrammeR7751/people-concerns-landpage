@@ -60,7 +60,7 @@ export const company = {
     return `tel:${this.phoneE164}`
   },
 
-  supportEmail: 'support@peopleconcerns.com',
+  supportEmail: 'Contact@peopleconcerns.com',
   /** Where contact form submissions are delivered to the team. */
   contactEmail: 'Contact@peopleconcerns.com',
   privacyEmail: 'privacy@peopleconcerns.com',
