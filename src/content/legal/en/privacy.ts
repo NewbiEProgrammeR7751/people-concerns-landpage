@@ -28,6 +28,7 @@ const privacy: LegalDocument = {
         items: [
           'We collect only what we need to create your account, handle your concerns and run our services.',
           'We never sell your personal data, and we send marketing only with your consent.',
+          'We use Google reCAPTCHA and other safeguards to protect our forms from spam and abuse.',
           'You can ask to access, copy, correct or destroy your data, or withdraw your consent, at any time.',
           "If you're unhappy with how we handle your data, you can complain to us or to the Saudi Data and Artificial Intelligence Authority (SDAIA).",
         ],
@@ -93,7 +94,7 @@ const privacy: LegalDocument = {
             ],
             [
               'Concern data',
-              'The description of your concern, attachments, reference number, dates, our notes and correspondence',
+              'The description of your concern, attachments, reference number, status, dates, our notes and correspondence',
               'From you and our team while handling the concern',
             ],
             [
@@ -105,6 +106,11 @@ const privacy: LegalDocument = {
               'Technical data',
               'IP address, device and browser type, pages visited, log and security data',
               'Automatically, through cookies and server logs',
+            ],
+            [
+              'Spam-protection data',
+              'Signals Google reCAPTCHA collects to tell people from automated programs, such as your IP address, browser and device details, and how you interact with our pages; the resulting score',
+              'Automatically, through Google reCAPTCHA, when you visit our site or use our forms',
             ],
             [
               'Marketing preferences',
@@ -158,8 +164,12 @@ const privacy: LegalDocument = {
               'Performance of an agreement with you, or your consent',
             ],
             [
-              'Keeping the Services secure, preventing fraud and misuse',
+              'Keeping the Services secure and preventing spam, fraud and misuse, including reCAPTCHA checks and limits on how often forms can be submitted',
               'Our legitimate interests, which do not override your rights (non-sensitive data only)',
+            ],
+            [
+              'Letting you track the status of your concern through the link in your confirmation email or with your reference number and email address',
+              'Performance of an agreement with you',
             ],
             [
               'Improving our Services using aggregated or anonymised information',
@@ -208,6 +218,10 @@ const privacy: LegalDocument = {
         },
         {
           kind: 'p',
+          text: 'Our forms are protected by Google reCAPTCHA. When you use our site, Google receives the spam-protection data described in section 3 and processes it under the [Google Privacy Policy](https://policies.google.com/privacy) and [Google Terms of Service](https://policies.google.com/terms).',
+        },
+        {
+          kind: 'p',
           text: 'If a concern relates to a client or organisation we work with, we share with them only the information needed to resolve it, and we will tell you before we do so unless the law prevents us.',
         },
       ],
@@ -236,6 +250,10 @@ const privacy: LegalDocument = {
         },
         {
           kind: 'p',
+          text: 'In particular: the tracking link in your confirmation email contains a random code that we store only in a one-way scrambled (hashed) form; the status page shows only your concern\'s status, dates and our notes, never your contact details; records used to limit form submissions store a hashed form of your IP address or email address rather than the address itself; and the page our team uses to manage concerns is password-protected and locks out repeated failed sign-ins.',
+        },
+        {
+          kind: 'p',
           text: 'No system is completely secure, but we review our measures regularly to keep your data protected against unauthorised access, loss, disclosure or alteration.',
         },
       ],
@@ -261,6 +279,10 @@ const privacy: LegalDocument = {
               '{retentionClosedConcern} after the concern is closed, to handle follow-ups and disputes',
             ],
             ['Technical and security logs', '{retentionTechnicalLogs}'],
+            [
+              'Spam-protection counters (hashed IP address or email address)',
+              'Deleted automatically within 1 hour',
+            ],
             [
               'Marketing preferences',
               'Until you withdraw consent, then a record of the withdrawal only',
@@ -332,6 +354,7 @@ const privacy: LegalDocument = {
           kind: 'ul',
           items: [
             '**Essential cookies** keep you signed in, protect the site and remember your choices. These are necessary for the Services to work.',
+            '**Security cookies** set by Google reCAPTCHA help tell people from automated programs and protect our forms from spam. They are necessary for the forms to work.',
             '**Analytics and preference cookies** help us understand how the site is used and improve it. We use these only with your consent.',
           ],
         },

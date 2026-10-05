@@ -89,14 +89,21 @@ export const company = {
     technicalLogs: '12 months',
   },
 
-  /** Privacy Policy s8 — hosting location statement. */
-  hostingStatement: 'Our primary hosting is located in the Kingdom of Saudi Arabia.',
+  /**
+   * Privacy Policy s8 — hosting location statement. Must match the real
+   * infrastructure: the site and its functions run on Vercel's global network,
+   * concern records on Upstash, email through Resend (AWS ap-northeast-1, Tokyo),
+   * and spam checks through Google reCAPTCHA.
+   */
+  hostingStatement:
+    'However, our website, database and email providers operate cloud infrastructure outside the Kingdom: the website runs on a global hosting network, and confirmation emails are currently sent through servers in Japan.',
 
   /**
    * Privacy Policy s7 — optional list of processor categories.
    * Set to null to omit the sentence entirely.
    */
-  processorCategories: 'These currently cover cloud hosting and email delivery.' as string | null,
+  processorCategories:
+    'These currently are Vercel (website hosting), Upstash (database for concern records and spam-protection counters), Resend (email delivery) and Google (reCAPTCHA spam protection).' as string | null,
 
   /** Privacy Policy s14 — where the cookie preferences UI lives. */
   cookieSettingsPath: '/#cookie-settings',
@@ -109,9 +116,9 @@ export const company = {
  * is a bigger editorial decision than a date format should be making on its own.
  */
 export const legalRevision = {
-  version: '1.0',
+  version: '1.1',
   lastUpdated: {
-    en: '23 September 2026',
-    ar: '23 سبتمبر 2026',
+    en: '5 October 2026',
+    ar: '5 أكتوبر 2026',
   },
 } as const
