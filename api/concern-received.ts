@@ -19,7 +19,9 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { company } from "../src/content/company";
+// The `.js` extension is required: package.json sets "type": "module", and
+// Node's ESM loader on Vercel does not resolve extensionless relative imports.
+import { company } from "../src/content/company.js";
 
 // Next.js App Router hints — inert in other runtimes.
 export const runtime = "nodejs";
