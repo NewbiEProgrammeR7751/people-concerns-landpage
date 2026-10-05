@@ -431,5 +431,6 @@ function internalNotification(submission: Submission, reference: string, submitt
   ].join("\n");
 }
 
-// Vercel/Netlify function default export (Web handler signature).
-export default POST;
+// No default export on purpose: Vercel treats a default export as a legacy
+// (req, res) handler, ignores the returned Response and the request hangs
+// until it times out. The named method export is what Vercel calls.

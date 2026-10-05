@@ -261,5 +261,6 @@ export async function GET(_request?: Request): Promise<Response> {
   return json({ events }, 200, { "cache-control": CACHE_CONTROL });
 }
 
-// Vercel/Netlify function default export (Web handler signature).
-export default GET;
+// No default export on purpose: Vercel treats a default export as a legacy
+// (req, res) handler, ignores the returned Response and the request hangs
+// until it times out. The named method export is what Vercel calls.
