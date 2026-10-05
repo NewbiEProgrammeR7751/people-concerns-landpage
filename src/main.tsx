@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import LegalDocumentPage from './pages/LegalDocumentPage'
+import AdminPage from './pages/AdminPage'
 import { matchLegalRoute } from './content/legal'
 import { useRoute } from './router'
 import './index.css'
@@ -16,6 +17,8 @@ function Routes() {
     const id = window.location.hash.slice(1)
     if (id) document.getElementById(id)?.scrollIntoView()
   }, [route])
+
+  if (route === '/admin') return <AdminPage />
 
   if (legal) {
     // Keyed so switching language remounts rather than reusing the open/closed

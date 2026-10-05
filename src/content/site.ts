@@ -16,7 +16,11 @@ export const SECTIONS = {
   whatWeBuild: 'what-we-build',
   howItWorks: 'how-it-works',
   contact: 'contact',
+  track: 'track',
 } as const
+
+/** Concern status ids, in the order a concern moves through them. Mirrors api/_lib/concern-store.ts. */
+export type ConcernStatus = 'received' | 'in_review' | 'replied' | 'closed'
 
 type Copy = {
   dir: 'ltr' | 'rtl'
@@ -24,7 +28,7 @@ type Copy = {
   /** Label on the language button — always names the language you switch TO. */
   langSwitch: string
   langSwitchAria: string
-  nav: { whatWeBuild: string; howItWorks: string; contact: string }
+  nav: { whatWeBuild: string; howItWorks: string; contact: string; track: string }
   menuOpen: string
   menuClose: string
   hero: {
@@ -67,8 +71,27 @@ type Copy = {
     successSub: string
     successRef: string
     successAgain: string
+    successTrack: string
     errorTitle: string
     errorRetry: string
+  }
+  track: {
+    h2: string
+    sub: string
+    refLabel: string
+    refPlaceholder: string
+    emailLabel: string
+    emailPlaceholder: string
+    submit: string
+    checking: string
+    notFound: string
+    rateLimited: string
+    error: string
+    statuses: Record<ConcernStatus, { label: string; desc: string }>
+    submittedLabel: string
+    updatedLabel: string
+    noteLabel: string
+    another: string
   }
   footer: {
     tagline: string
@@ -96,6 +119,7 @@ export const t: Record<Lang, Copy> = {
       whatWeBuild: 'What we build',
       howItWorks: 'How it works',
       contact: 'Contact',
+      track: 'Track',
     },
     menuOpen: 'Open menu',
     menuClose: 'Close menu',
@@ -223,8 +247,33 @@ export const t: Record<Lang, Copy> = {
       successSub: 'We have emailed you a confirmation and will reply within 24 hours.',
       successRef: 'Your reference',
       successAgain: 'Send another',
+      successTrack: 'Track your concern',
       errorTitle: "We couldn't send that",
       errorRetry: 'Please try again, or email us at',
+    },
+
+    track: {
+      h2: 'Track your concern',
+      sub: 'Use the link in your confirmation email, or enter your reference and the email you wrote in with.',
+      refLabel: 'Reference',
+      refPlaceholder: 'PC-261005-1234',
+      emailLabel: 'Email',
+      emailPlaceholder: 'you@example.com',
+      submit: 'Check status',
+      checking: 'Checking…',
+      notFound: "We couldn't find a concern with that reference and email. Check both against your confirmation email.",
+      rateLimited: 'Too many attempts. Please wait a few minutes and try again.',
+      error: "We couldn't check right now. Please try again shortly.",
+      statuses: {
+        received: { label: 'Received', desc: 'Your concern has reached our team.' },
+        in_review: { label: 'In review', desc: 'Someone on the team is looking into it.' },
+        replied: { label: 'Replied', desc: 'We have replied — check your email and phone.' },
+        closed: { label: 'Closed', desc: 'This concern is resolved. Write in again any time.' },
+      },
+      submittedLabel: 'Submitted',
+      updatedLabel: 'Last update',
+      noteLabel: 'Note from the team',
+      another: 'Check another concern',
     },
 
     footer: {
@@ -253,6 +302,7 @@ export const t: Record<Lang, Copy> = {
       whatWeBuild: 'ما نبنيه',
       howItWorks: 'كيف نعمل',
       contact: 'تواصل معنا',
+      track: 'تتبّع طلبك',
     },
     menuOpen: 'فتح القائمة',
     menuClose: 'إغلاق القائمة',
@@ -380,8 +430,33 @@ export const t: Record<Lang, Copy> = {
       successSub: 'أرسلنا لك رسالة تأكيد على بريدك، وسنرد خلال 24 ساعة.',
       successRef: 'رقمك المرجعي',
       successAgain: 'إرسال طلب آخر',
+      successTrack: 'تتبّع طلبك',
       errorTitle: 'لم نتمكن من الإرسال',
       errorRetry: 'يرجى المحاولة مرة أخرى، أو راسلنا على',
+    },
+
+    track: {
+      h2: 'تتبّع طلبك',
+      sub: 'استخدم الرابط في رسالة التأكيد، أو أدخل رقمك المرجعي والبريد الإلكتروني الذي راسلتنا منه.',
+      refLabel: 'الرقم المرجعي',
+      refPlaceholder: 'PC-261005-1234',
+      emailLabel: 'البريد الإلكتروني',
+      emailPlaceholder: 'you@example.com',
+      submit: 'عرض الحالة',
+      checking: 'جارٍ التحقق…',
+      notFound: 'لم نجد طلباً بهذا الرقم المرجعي والبريد الإلكتروني. تحقق منهما في رسالة التأكيد.',
+      rateLimited: 'محاولات كثيرة. يرجى الانتظار بضع دقائق ثم المحاولة مرة أخرى.',
+      error: 'تعذّر التحقق الآن. يرجى المحاولة بعد قليل.',
+      statuses: {
+        received: { label: 'تم الاستلام', desc: 'وصل طلبك إلى فريقنا.' },
+        in_review: { label: 'قيد المراجعة', desc: 'أحد أعضاء الفريق يعمل عليه.' },
+        replied: { label: 'تم الرد', desc: 'رددنا عليك — راجع بريدك وجوالك.' },
+        closed: { label: 'مغلق', desc: 'تمت معالجة هذا الطلب. راسلنا مجدداً في أي وقت.' },
+      },
+      submittedLabel: 'تاريخ الإرسال',
+      updatedLabel: 'آخر تحديث',
+      noteLabel: 'ملاحظة من الفريق',
+      another: 'تتبّع طلب آخر',
     },
 
     footer: {

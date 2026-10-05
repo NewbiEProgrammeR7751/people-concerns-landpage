@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import logoIcon from "@/imports/PeopleConcerns_Icon_Transparent_500.png";
 import { company } from "@/content/company";
-import { SECTIONS, t, type Lang, type ProjectType } from "@/content/site";
+import { SECTIONS, t, type ConcernStatus, type Lang, type ProjectType } from "@/content/site";
 import { Link } from "@/router";
 
 /**
@@ -276,6 +276,246 @@ function SectionHeading({
   );
 }
 
+// ── Track your concern ─────────────────────────────────────────────────────
+
+const STATUS_ORDER: ConcernStatus[] = ["received", "in_review", "replied", "closed"];
+
+/** Mirrors PublicConcern in api/_lib/concern-store.ts. */
+type TrackedConcern = {
+  reference: string;
+  createdAt: string;
+  updatedAt: string;
+  status: ConcernStatus;
+  note: string;
+};
+
+type TrackState =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "found"; concern: TrackedConcern }
+  | { kind: "error"; message: string };
+
+function TrackSection({
+  lang,
+  headingFont,
+  fieldStyle,
+  prefillRef,
+}: {
+  lang: Lang;
+  headingFont: string;
+  fieldStyle: React.CSSProperties;
+  /** Set when the contact form succeeds, so "Track your concern" lands pre-filled. */
+  prefillRef: string | null;
+}) {
+  const tx = t[lang].track;
+  const isAr = lang === "ar";
+  const [reference, setReference] = useState("");
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<TrackState>({ kind: "idle" });
+
+  const lookup = useCallback(
+    async (body: { reference: string; token?: string; email?: string }) => {
+      setState({ kind: "checking" });
+      try {
+        const response = await fetch("/api/concern-status", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (response.status === 404 || response.status === 400) return setState({ kind: "error", message: tx.notFound });
+        if (response.status === 429) return setState({ kind: "error", message: tx.rateLimited });
+        if (!response.ok) throw new Error(`status ${response.status}`);
+        const data = (await response.json()) as { concern: TrackedConcern };
+        setState({ kind: "found", concern: data.concern });
+      } catch (error) {
+        console.error("[track]", error);
+        setState({ kind: "error", message: tx.error });
+      }
+    },
+    [tx],
+  );
+
+  // The confirmation email links to /?ref=…&t=…#track. Look it up once, then
+  // drop the token from the address bar so it isn't shared by copy-paste.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    const token = params.get("t");
+    if (!ref || !token) return;
+    setReference(ref);
+    void lookup({ reference: ref, token });
+    window.history.replaceState(window.history.state, "", window.location.pathname + window.location.hash);
+    // Runs once on landing; `lookup` changing with the language must not re-run it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!prefillRef) return;
+    setReference(prefillRef);
+    setState({ kind: "idle" });
+  }, [prefillRef]);
+
+  const formatDate = (iso: string) =>
+    new Intl.DateTimeFormat(isAr ? "ar-SA-u-ca-gregory" : "en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "Asia/Riyadh",
+    }).format(new Date(iso));
+
+  const labelClass = "mb-1.5 block text-xs font-medium";
+  const focusHandlers = {
+    onFocus: (e: React.FocusEvent<HTMLInputElement>) => (e.currentTarget.style.borderColor = "var(--teal)"),
+    onBlur: (e: React.FocusEvent<HTMLInputElement>) => (e.currentTarget.style.borderColor = "var(--border-subtle)"),
+  };
+
+  return (
+    <section
+      id={SECTIONS.track}
+      className="py-24"
+      style={{ background: "var(--bg-surface)", borderTop: "1px solid var(--border-subtle)", scrollMarginTop: "4rem" }}
+    >
+      <div className="mx-auto max-w-2xl px-6">
+        <SectionHeading h2={tx.h2} sub={tx.sub} headingFont={headingFont} isAr={isAr} />
+
+        <div className="rounded-3xl p-6 md:p-10" style={{ background: "var(--bg-card)", border: "1px solid var(--border-subtle)" }}>
+          {state.kind === "found" ? (
+            <div role="status">
+              <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-lg font-bold tracking-wide" style={{ color: "var(--teal)", fontFamily: headingFont }} dir="ltr">
+                  {state.concern.reference}
+                </span>
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {tx.submittedLabel}: {formatDate(state.concern.createdAt)}
+                </span>
+              </div>
+
+              {/* Progress through the four statuses; everything up to the current one is done. */}
+              <ol className="mb-6 grid grid-cols-4 gap-2">
+                {STATUS_ORDER.map((s, i) => {
+                  const reached = i <= STATUS_ORDER.indexOf(state.concern.status);
+                  const current = s === state.concern.status;
+                  return (
+                    <li key={s} className="text-center" aria-current={current ? "step" : undefined}>
+                      <div
+                        className="mb-2 h-1.5 rounded-full"
+                        style={{ background: reached ? "var(--teal)" : "var(--border-strong)" }}
+                      />
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: current ? "var(--text-primary)" : reached ? "var(--teal)" : "var(--text-muted)" }}
+                      >
+                        {tx.statuses[s].label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <p className="mb-1 text-base font-semibold" style={{ fontFamily: headingFont }}>
+                {tx.statuses[state.concern.status].label}
+              </p>
+              <p className="mb-4 text-sm" style={{ color: "var(--text-secondary)" }}>
+                {tx.statuses[state.concern.status].desc}
+              </p>
+
+              {state.concern.note && (
+                <div
+                  className="mb-4 rounded-xl px-4 py-3 text-sm"
+                  style={{ background: "var(--teal-dim)", border: "1px solid rgba(79,179,160,0.3)", color: "var(--text-secondary)" }}
+                >
+                  <span className="mb-1 block text-xs font-semibold" style={{ color: "var(--teal)" }}>{tx.noteLabel}</span>
+                  <span style={{ whiteSpace: "pre-line" }}>{state.concern.note}</span>
+                </div>
+              )}
+
+              <p className="mb-6 text-xs" style={{ color: "var(--text-muted)" }}>
+                {tx.updatedLabel}: {formatDate(state.concern.updatedAt)}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setState({ kind: "idle" })}
+                className="tap-target rounded-xl px-5 text-sm font-semibold"
+                style={outlineButtonStyle(headingFont)}
+              >
+                {tx.another}
+              </button>
+            </div>
+          ) : (
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (state.kind === "checking") return;
+                void lookup({ reference: reference.trim().toUpperCase(), email: email.trim() });
+              }}
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="tr-ref" className={labelClass} style={{ color: "var(--text-muted)" }}>
+                    {tx.refLabel}
+                  </label>
+                  <input
+                    id="tr-ref"
+                    type="text"
+                    dir="ltr"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder={tx.refPlaceholder}
+                    required
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    className="tap-target w-full rounded-xl px-4 py-3 text-sm uppercase outline-none transition-all duration-200"
+                    style={{ ...fieldStyle, textAlign: "left" }}
+                    {...focusHandlers}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="tr-email" className={labelClass} style={{ color: "var(--text-muted)" }}>
+                    {tx.emailLabel}
+                  </label>
+                  <input
+                    id="tr-email"
+                    type="email"
+                    dir="ltr"
+                    autoComplete="email"
+                    placeholder={tx.emailPlaceholder}
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="tap-target w-full rounded-xl px-4 py-3 text-sm outline-none transition-all duration-200"
+                    style={{ ...fieldStyle, textAlign: "left" }}
+                    {...focusHandlers}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={state.kind === "checking"}
+                className="tap-target w-full rounded-xl py-3.5 text-sm font-semibold transition-all duration-200 disabled:cursor-wait disabled:opacity-60 enabled:hover:brightness-110"
+                style={primaryButtonStyle(headingFont)}
+              >
+                {state.kind === "checking" ? tx.checking : tx.submit}
+              </button>
+
+              {state.kind === "error" && (
+                <div
+                  role="alert"
+                  className="rounded-xl px-4 py-3 text-sm"
+                  style={{ background: "var(--coral-dim)", border: "1px solid rgba(232,131,111,0.35)", color: "var(--text-secondary)" }}
+                >
+                  {state.message}
+                </div>
+              )}
+            </form>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // ── Main App ───────────────────────────────────────────────────────────────
 
 type Status = "idle" | "sending" | "sent" | "error";
@@ -288,6 +528,7 @@ export default function App() {
   const [formState, setFormState] = useState({ name: "", phone: "", email: "", message: "" });
   const [status, setStatus] = useState<Status>("idle");
   const [reference, setReference] = useState<string | null>(null);
+  const [trackPrefill, setTrackPrefill] = useState<string | null>(null);
 
   const tx = t[lang];
   const isAr = lang === "ar";
@@ -346,6 +587,7 @@ export default function App() {
     { href: `#${SECTIONS.whatWeBuild}`, label: tx.nav.whatWeBuild },
     { href: `#${SECTIONS.howItWorks}`, label: tx.nav.howItWorks },
     { href: `#${SECTIONS.contact}`, label: tx.nav.contact },
+    { href: `#${SECTIONS.track}`, label: tx.nav.track },
   ];
 
   const fieldStyle: React.CSSProperties = {
@@ -721,14 +963,26 @@ export default function App() {
                       </span>
                     </p>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setStatus("idle")}
-                    className="tap-target mt-6 rounded-xl px-5 text-sm font-semibold"
-                    style={outlineButtonStyle(headingFont)}
-                  >
-                    {tx.contact.successAgain}
-                  </button>
+                  <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    {reference && (
+                      <a
+                        href={`#${SECTIONS.track}`}
+                        onClick={() => setTrackPrefill(reference)}
+                        className="tap-target inline-flex items-center rounded-xl px-5 text-sm font-semibold no-underline"
+                        style={primaryButtonStyle(headingFont)}
+                      >
+                        {tx.contact.successTrack}
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setStatus("idle")}
+                      className="tap-target rounded-xl px-5 text-sm font-semibold"
+                      style={outlineButtonStyle(headingFont)}
+                    >
+                      {tx.contact.successAgain}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -871,6 +1125,9 @@ export default function App() {
           </div>
         </div>
       </section>
+
+      {/* ── TRACK YOUR CONCERN ──────────────────────────────────────────── */}
+      <TrackSection lang={lang} headingFont={headingFont} fieldStyle={fieldStyle} prefillRef={trackPrefill} />
 
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
       <footer style={{ background: "var(--bg-surface)", borderTop: "1px solid var(--border-subtle)" }}>

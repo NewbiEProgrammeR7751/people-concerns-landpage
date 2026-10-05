@@ -223,7 +223,8 @@ Copy the block from `.env.example` into `.env` and fill in:
 | `PUBLIC_SITE_URL` | **yes** | Absolute origin. Every URL in the email is built from it, including the logo. |
 | `CONCERN_FROM_EMAIL` | no | Envelope sender; defaults to `People Concerns <NoReply@peopleconcerns.com>`. |
 | `CONCERNS_INBOX_EMAIL` | no | Where the submission itself is forwarded; defaults to `Contact@peopleconcerns.com`. |
-| `CONCERN_TRACKING_URL` | no | Template for the "Track your concern" button; `{reference}` is substituted. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | for tracking | Upstash Redis REST credentials (set automatically by Vercel → Storage → Upstash). Without them nothing is saved and the email's "Track your concern" button links to `#contact`. |
+| `ADMIN_PASSWORD` | for `/admin` | Password for the admin page where the team updates each concern's status. |
 
 The sending domain must be verified in Resend before mail to external addresses
 is delivered. To use a different provider, rewrite `sendEmail()` in

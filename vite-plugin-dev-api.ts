@@ -23,6 +23,8 @@ type DevApiRoute = {
 const ROUTES: readonly DevApiRoute[] = [
   { path: '/api/github-activity', module: '/api/github-activity.ts', methods: ['GET'] },
   { path: '/api/concern-received', module: '/api/concern-received.ts', methods: ['POST'] },
+  { path: '/api/concern-status', module: '/api/concern-status.ts', methods: ['POST'] },
+  { path: '/api/admin-concerns', module: '/api/admin-concerns.ts', methods: ['GET', 'PATCH'] },
 ]
 
 /**
@@ -36,7 +38,11 @@ const SERVER_ENV_KEYS = [
   'RESEND_API_KEY',
   'CONCERN_FROM_EMAIL',
   'CONCERNS_INBOX_EMAIL',
-  'CONCERN_TRACKING_URL',
+  'KV_REST_API_URL',
+  'KV_REST_API_TOKEN',
+  'UPSTASH_REDIS_REST_URL',
+  'UPSTASH_REDIS_REST_TOKEN',
+  'ADMIN_PASSWORD',
   'PUBLIC_SITE_URL',
 ] as const
 

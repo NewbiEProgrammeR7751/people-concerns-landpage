@@ -22,6 +22,7 @@ import { readFile } from "node:fs/promises";
 // The `.js` extension is required: package.json sets "type": "module", and
 // Node's ESM loader on Vercel does not resolve extensionless relative imports.
 import { company } from "../src/content/company.js";
+import { createConcern, deleteConcern, storeConfigured } from "./_lib/concern-store.js";
 
 // Next.js App Router hints — inert in other runtimes.
 export const runtime = "nodejs";
@@ -221,7 +222,6 @@ type Config = {
   from: string;
   siteUrl: string;
   inbox: string | null;
-  trackingTemplate: string | null;
 };
 
 /** Reads and validates the environment once per request. */
@@ -245,7 +245,6 @@ function readConfig(): Config | { error: string; detail: string } {
     from: process.env.CONCERN_FROM_EMAIL?.trim() || `${company.name} <${company.noReplyEmail}>`,
     siteUrl,
     inbox: process.env.CONCERNS_INBOX_EMAIL?.trim() || company.contactEmail,
-    trackingTemplate: process.env.CONCERN_TRACKING_URL?.trim() || null,
   };
 }
 
@@ -330,18 +329,31 @@ export async function POST(request: Request): Promise<Response> {
   const lang = source.lang === "ar" ? "ar" : "en";
 
   const now = new Date();
-  const reference = makeReference(now);
+  const submission: Submission = { name, email, phone, projectType, message, lang };
+
+  // Saved first so the email can link straight to its status. If the store is
+  // missing or down the enquiry still goes through: the member just gets a
+  // link to the contact section instead of a tracking link.
+  let reference = makeReference(now);
+  let concernUrl = `${config.siteUrl}/#contact`;
+  let saved = false;
+  if (storeConfigured()) {
+    try {
+      const created = await createConcern(submission, now, makeReference);
+      reference = created.reference;
+      const query = new URLSearchParams({ ref: reference, t: created.token });
+      concernUrl = `${config.siteUrl}/?${query}#track`;
+      saved = true;
+    } catch (error) {
+      console.error(`[concern-received] store_failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   // The form has no subject field, so the selected chip stands in as the short
   // title the template shows.
   const subject = projectType
     ? `New enquiry — ${PROJECT_TYPE_LABEL[projectType]}`
     : "New enquiry";
-
-  const concernUrl = config.trackingTemplate
-    ? config.trackingTemplate.replace("{reference}", encodeURIComponent(reference))
-    : `${config.siteUrl}/#contact`;
-
-  const submission: Submission = { name, email, phone, projectType, message, lang };
 
   const values: Record<string, string> = {
     member_name: firstName(name),
@@ -381,6 +393,9 @@ export async function POST(request: Request): Promise<Response> {
       replyTo: company.supportEmail,
     });
   } catch (error) {
+    // The member is told it failed and will likely resubmit, so drop the record
+    // rather than leave an orphan the team cannot match to an email.
+    if (saved) await deleteConcern(reference).catch(() => {});
     const aborted = error instanceof Error && error.name === "TimeoutError";
     return fail(
       aborted ? 504 : 502,
