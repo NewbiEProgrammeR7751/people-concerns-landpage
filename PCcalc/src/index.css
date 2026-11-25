@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  /* Inter carries no Arabic glyphs, so Arabic text falls through to Noto
+     automatically, per glyph. One stack serves both directions. */
+  --font-sans:
+    'Inter', 'Noto Sans Arabic', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased;
+  }
+
+  /* Numeric columns stay aligned as prices change. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Prices and week counts stay left-to-right inside Arabic sentences. */
+  [dir='rtl'] .tabular {
+    unicode-bidi: plaintext;
+  }
+
+  /* Arabic sits lower on the line; a touch more leading keeps rows even. */
+  [dir='rtl'] body {
+    line-height: 1.7;
+  }
+}
+
+@layer utilities {
+  .scrollbar-slim::-webkit-scrollbar {
+    width: 8px;
+  }
+  .scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-slim::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full;
+  }
+  .scrollbar-slim::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-700;
+  }
+}
