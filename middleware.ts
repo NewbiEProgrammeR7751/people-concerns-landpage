@@ -2,9 +2,10 @@
  * Vercel Routing Middleware — password-protects the internal PCcalc app.
  *
  * Every request under /pccalc must carry HTTP Basic credentials whose password
- * matches PCCALC_PASSWORD (any username is accepted). The browser shows its own
- * sign-in prompt and remembers the credentials for the session. With the env
- * var unset, /pccalc is closed to everyone rather than left open.
+ * matches ADMIN_PASSWORD, the same one the /admin page uses (any username is
+ * accepted). The browser shows its own sign-in prompt and remembers the
+ * credentials for the session. With the env var unset, /pccalc is closed to
+ * everyone rather than left open.
  *
  * Returning nothing lets the request continue to the static files.
  */
@@ -52,7 +53,7 @@ function suppliedPassword(request: Request): string {
 }
 
 export default async function middleware(request: Request): Promise<Response | undefined> {
-  const password = process.env.PCCALC_PASSWORD?.trim();
+  const password = process.env.ADMIN_PASSWORD?.trim();
   if (!password) return deny(503, "PCcalc is not configured.");
 
   if (await matches(suppliedPassword(request), password)) return undefined;
